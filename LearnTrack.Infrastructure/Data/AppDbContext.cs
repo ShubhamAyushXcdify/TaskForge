@@ -11,6 +11,10 @@ public class AppDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<Employee> Employees { get; set; }
     public DbSet<CourseAssignment> CourseAssignments { get; set; }
+    public DbSet<CourseProvider> CourseProviders { get; set; }
+    public DbSet<CourseCategory> CourseCategories { get; set; }
+    public DbSet<Course> Courses { get; set; }
+    public DbSet<Document> Documents { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -18,11 +22,15 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         // 🔥 FORCE LOWERCASE TABLE NAMES (IMPORTANT)
-        modelBuilder.Entity<User>().ToTable("users");
-        modelBuilder.Entity<Role>().ToTable("roles");
-        modelBuilder.Entity<Employee>().ToTable("employees");
-        modelBuilder.Entity<CourseAssignment>().ToTable("courseassignments");
-        modelBuilder.Entity<AuditLog>().ToTable("auditlogs");
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            var tableName = entity.GetTableName();
+
+            if (!string.IsNullOrEmpty(tableName))
+            {
+                entity.SetTableName(tableName.ToLower());
+            }
+        }
 
         // UUID default
         modelBuilder.Entity<User>()

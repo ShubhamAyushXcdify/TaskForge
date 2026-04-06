@@ -18,7 +18,7 @@ public class User
     public Guid RoleId { get; set; }
 
     // Navigation Property
-    public Role Role { get; set; } = null!;
+    public Role? Role { get; set; } = null!;
 
     [Column("isactive")]
     public bool IsActive { get; set; } = true;
