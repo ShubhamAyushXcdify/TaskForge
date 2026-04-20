@@ -18,6 +18,7 @@ public class EmployeeController : ControllerBase
     }
 
     // ✅ GET ALL EMPLOYEES
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet]
     public async Task<IActionResult> GetAllEmployees()
     {
@@ -26,6 +27,7 @@ public class EmployeeController : ControllerBase
     }
 
     // ✅ GET EMPLOYEE BY ID
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetEmployeeById(Guid id)
     {
@@ -38,6 +40,7 @@ public class EmployeeController : ControllerBase
     }
 
     // ✅ CREATE EMPLOYEE (ER SAFE)
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
     public async Task<IActionResult> CreateEmployee(Employee employee)
     {
@@ -58,6 +61,7 @@ public class EmployeeController : ControllerBase
     }
 
     // ✅ UPDATE EMPLOYEE (ER SAFE)
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateEmployee(Guid id, Employee updatedEmployee)
     {
@@ -83,6 +87,7 @@ public class EmployeeController : ControllerBase
     }
 
     // ✅ DELETE EMPLOYEE
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteEmployee(Guid id)
     {

@@ -21,6 +21,7 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ CREATE (KEEPING SWAYAM LOGIC SAFE)
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
     public async Task<IActionResult> AssignCourse([FromBody] CourseAssignment assignment)
     {
@@ -58,6 +59,7 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ GET ALL
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -66,6 +68,7 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ GET BY ID
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -78,6 +81,7 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ UPDATE
+    [Authorize(Roles = "Employee")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, CourseAssignment updated)
     {
@@ -86,6 +90,18 @@ public class AssignmentController : ControllerBase
         if (existing == null)
             return NotFound("Assignment not found");
 
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(e => e.UserId.ToString() == userId);
+
+        if (employee == null)
+            return Unauthorized("Employee not found");
+
+        // 🔐 Ownership check
+        if (existing.EmployeeId != employee.Id)
+            return Forbid("You can only update your own assignment");
+
         existing.ProgressPercentage = updated.ProgressPercentage;
         existing.Status = updated.Status;
         existing.StartDate = updated.StartDate;
@@ -93,10 +109,11 @@ public class AssignmentController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(existing);
+        return Ok(existing);    
     }
 
     // ✅ DELETE
+    [Authorize(Roles = "Admin,Manager")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {

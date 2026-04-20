@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LearnTrack.API.Controllers;
-[Authorize]
+[Authorize(Roles ="Admin")]
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase

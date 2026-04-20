@@ -19,6 +19,7 @@ public class CourseCategoryController : ControllerBase
     }
 
     // CREATE
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
     public async Task<IActionResult> Create(CourseCategory category)
     {
@@ -32,6 +33,7 @@ public class CourseCategoryController : ControllerBase
     }
 
     // GET ALL
+    [Authorize(Roles = "Admin,Manager,Employee")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {

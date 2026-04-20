@@ -20,6 +20,7 @@ public class CourseController : ControllerBase
     }
 
     // CREATE
+    [Authorize(Roles = "Manager,Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(Course course)
     {
@@ -51,8 +52,9 @@ public class CourseController : ControllerBase
 
         return Ok(course);
     }
-
+        
     // GET ALL
+    [Authorize(Roles = "Admin,Manager,Employee")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {

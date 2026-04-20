@@ -19,6 +19,7 @@ public class DocumentController : ControllerBase
     }
 
     // ✅ UPLOAD DOCUMENT
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
     public async Task<IActionResult> Upload([FromForm] DocumentUploadRequest request)
     {
@@ -49,6 +50,7 @@ public class DocumentController : ControllerBase
     }
 
     // ✅ GET ALL DOCUMENTS
+    [Authorize(Roles = "Admin,Manager,Employee")]
     [HttpGet]
     public IActionResult GetAll()
     {
