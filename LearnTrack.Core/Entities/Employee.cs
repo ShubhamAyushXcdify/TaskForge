@@ -22,12 +22,9 @@ public class Employee
 
     [Column("employeecode")]
     public string EmployeeCode { get; set; } = string.Empty;
-
-    // 🔥 NEW (from ER diagram)
     [Column("managerid")]
     public Guid? ManagerId { get; set; }
 
-    // 🔥 NEW (from ER diagram)
     [Column("employmentstatus")]
     public string EmploymentStatus { get; set; } = "Active";
 

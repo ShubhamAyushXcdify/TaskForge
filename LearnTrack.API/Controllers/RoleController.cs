@@ -1,10 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using LearnTrack.Infrastructure.Data;
-using LearnTrack.Core.Entities;
+﻿using LearnTrack.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
-namespace LearnTrack.API.Controllers;
-
+[Authorize(Roles = "Admin")]
 [Route("api/[controller]")]
 [ApiController]
 public class RoleController : ControllerBase
@@ -16,28 +15,15 @@ public class RoleController : ControllerBase
         _context = context;
     }
 
-    // STEP 1: CREATE ROLES (Admin, Manager, Employee)
-    [HttpPost]
-    public async Task<IActionResult> CreateRole([FromBody] Role role)
-    {
-        if (role.Id == Guid.Empty)
-        {
-            role.Id = Guid.NewGuid();
-        }
-
-        _context.Roles.Add(role);
-        await _context.SaveChangesAsync();
-        return Ok(role);
-    }
-
-    // Helper to verify roles during demo
+    // ✅ GET ALL ROLES
     [HttpGet]
     public async Task<IActionResult> GetRoles()
     {
         var roles = await _context.Roles.ToListAsync();
         return Ok(roles);
     }
-    //Get By Id
+
+    // OPTIONAL
     [HttpGet("{id}")]
     public async Task<IActionResult> GetRoleById(Guid id)
     {
@@ -47,34 +33,5 @@ public class RoleController : ControllerBase
             return NotFound("Role not found");
 
         return Ok(role);
-    }
-    //Update Role
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateRole(Guid id, Role updatedRole)
-    {
-        var role = await _context.Roles.FindAsync(id);
-
-        if (role == null)
-            return NotFound("Role not found");
-
-        role.Name = updatedRole.Name;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(role);
-    }
-    //Delete Role by Id
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteRole(Guid id)
-    {
-        var role = await _context.Roles.FindAsync(id);
-
-        if (role == null)
-            return NotFound("Role not found");
-
-        _context.Roles.Remove(role);
-        await _context.SaveChangesAsync();
-
-        return Ok("Role deleted successfully");
     }
 }

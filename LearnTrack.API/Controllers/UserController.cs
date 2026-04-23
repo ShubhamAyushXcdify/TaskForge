@@ -3,9 +3,10 @@ using LearnTrack.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
-[Authorize]
+[Authorize(Roles ="Admin")]
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase
@@ -22,7 +23,17 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _context.Users.ToListAsync();
-        return Ok(users);
+
+        var response = users.Select(user => new UserResponseDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        });
+
+        return Ok(response);
     }
 
     // ✅ GET USER BY ID
@@ -34,7 +45,15 @@ public class UserController : ControllerBase
         if (user == null)
             return NotFound("User not found");
 
-        return Ok(user);
+        var response = new UserResponseDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        };
+        return Ok(response);
     }
 
     // ✅ CREATE USER
@@ -44,6 +63,9 @@ public class UserController : ControllerBase
     {
         if (user == null)
             return BadRequest("Invalid data");
+        //Validation for Email and Password Required
+        if (string.IsNullOrEmpty(user.Email) || string.IsNullOrEmpty(user.PasswordHash))
+            return BadRequest("Email and Password are required");
 
         user.Id = Guid.NewGuid(); // ensure id
         user.CreatedAt = DateTime.UtcNow;
@@ -52,7 +74,14 @@ public class UserController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        return Ok(user);
+        return Ok(new UserResponseDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        });
     }
 
     // ✅ UPDATE USER
@@ -70,8 +99,14 @@ public class UserController : ControllerBase
         user.IsActive = updatedUser.IsActive;
 
         await _context.SaveChangesAsync();
-
-        return Ok(user);
+        return Ok(new UserResponseDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt
+        });
     }
 
     // ✅ DELETE USER

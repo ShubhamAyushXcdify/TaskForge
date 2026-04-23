@@ -20,7 +20,9 @@ public class AssignmentController : ControllerBase
         _context = context;
     }
 
-    // ✅ CREATE (KEEPING SWAYAM LOGIC SAFE)
+    // ✅ CREATE 
+
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
     public async Task<IActionResult> AssignCourse([FromBody] CourseAssignment assignment)
     {
@@ -39,7 +41,8 @@ public class AssignmentController : ControllerBase
 
         _context.CourseAssignments.Add(assignment);
 
-        // 🔥 Audit Log (UNCHANGED LOGIC)
+        // 🔥 Audit Log 
+
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         var audit = new AuditLog
@@ -58,6 +61,8 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ GET ALL
+
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -66,6 +71,8 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ GET BY ID
+
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -78,6 +85,8 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ UPDATE
+
+    [Authorize(Roles = "Employee")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, CourseAssignment updated)
     {
@@ -85,6 +94,18 @@ public class AssignmentController : ControllerBase
 
         if (existing == null)
             return NotFound("Assignment not found");
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(e => e.UserId.ToString() == userId);
+
+        if (employee == null)
+            return Unauthorized("Employee not found");
+
+        // 🔐 Ownership check
+        if (existing.EmployeeId != employee.Id)
+            return Forbid("You can only update your own assignment");
 
         existing.ProgressPercentage = updated.ProgressPercentage;
         existing.Status = updated.Status;
@@ -97,6 +118,8 @@ public class AssignmentController : ControllerBase
     }
 
     // ✅ DELETE
+
+    [Authorize(Roles = "Admin,Manager")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {

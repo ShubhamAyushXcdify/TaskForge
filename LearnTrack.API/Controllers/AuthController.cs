@@ -25,7 +25,9 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest login)
     {
         var user = await _context.Users
-     .FirstOrDefaultAsync(u => u.Email == login.Email);
+
+            .Include(u=> u.Role)
+            .FirstOrDefaultAsync(u => u.Email == login.Email);
 
         if (user == null)
             return Unauthorized("Invalid Credentials");
@@ -34,12 +36,16 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid Credentials");
 
         // Professional Token Generation Logic
+
         var tokenHandler = new JwtSecurityTokenHandler();
+
         var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[] {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                 new Claim(ClaimTypes.Role, user.Role!.Name)
             }),
             Expires = DateTime.UtcNow.AddHours(
                 Convert.ToDouble(_config["Jwt:expiryhours"])),
