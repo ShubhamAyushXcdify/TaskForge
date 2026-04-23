@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest login)
     {
         var user = await _context.Users
-            //Role based 
+
             .Include(u=> u.Role)
             .FirstOrDefaultAsync(u => u.Email == login.Email);
 
@@ -36,8 +36,11 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid Credentials");
 
         // Professional Token Generation Logic
+
         var tokenHandler = new JwtSecurityTokenHandler();
+
         var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[] {
