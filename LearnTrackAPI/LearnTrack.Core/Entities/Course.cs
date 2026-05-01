@@ -17,5 +17,8 @@
 
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+
+        public virtual CourseCategory? Category { get; set; }
+        public virtual CourseProvider? Provider { get; set; }
     }
 }
