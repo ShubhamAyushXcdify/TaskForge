@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using LearnTrack.Infrastructure.Data;
 using LearnTrack.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using LearnTrack.API.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
@@ -18,7 +19,24 @@ public class CourseProviderController : ControllerBase
         _context = context;
     }
 
-    // ✅ CREATE
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var providers = await _context.CourseProviders
+            .Select(p => new CourseProviderItemDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Website = p.Website // Ensure this property exists in your Entity!
+            })
+            .ToListAsync();
+
+        return Ok(new CourseProviderResponseDto
+        {
+            Success = true,
+            Data = providers
+        });
+    }
 
     [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
@@ -29,16 +47,7 @@ public class CourseProviderController : ControllerBase
 
         _context.CourseProviders.Add(provider);
         await _context.SaveChangesAsync();
-
-        return Ok(provider);
-    }
-
-    // ✅ GET ALL
-    [Authorize(Roles = "Admin,Manager,Employee")]
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        var data = await _context.CourseProviders.ToListAsync();
-        return Ok(data);
+        
+        return Ok(new { Success = true, Data = provider });
     }
 }

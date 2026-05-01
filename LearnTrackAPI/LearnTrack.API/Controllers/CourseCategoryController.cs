@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using LearnTrack.Infrastructure.Data;
 using LearnTrack.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using LearnTrack.API.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
@@ -18,7 +19,24 @@ public class CourseCategoryController : ControllerBase
         _context = context;
     }
 
-    // CREATE
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var categories = await _context.CourseCategories
+            .Select(c => new CourseCategoryItemDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Description = c.Description
+            })
+            .ToListAsync();
+
+        return Ok(new CourseCategoryResponseDto
+        {
+            Success = true,
+            Data = categories
+        });
+    }
 
     [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
@@ -29,17 +47,7 @@ public class CourseCategoryController : ControllerBase
 
         _context.CourseCategories.Add(category);
         await _context.SaveChangesAsync();
-
-        return Ok(category);
-    }
-
-    // GET ALL
-
-    [Authorize(Roles = "Admin,Manager,Employee")]
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        var data = await _context.CourseCategories.ToListAsync();
-        return Ok(data);
+        
+        return Ok(new { Success = true, Data = category });
     }
 }

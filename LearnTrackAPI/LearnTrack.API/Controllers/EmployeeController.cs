@@ -1,12 +1,12 @@
-﻿using LearnTrack.Core.Entities;
-using LearnTrack.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LearnTrack.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using LearnTrack.Core.DTOs;
+using LearnTrack.API.DTOs;
 
 namespace LearnTrack.API.Controllers;
-[Authorize]
+
+[Authorize(Roles = "Admin,Manager")]
 [ApiController]
 [Route("api/[controller]")]
 public class EmployeeController : ControllerBase
@@ -18,138 +18,78 @@ public class EmployeeController : ControllerBase
         _context = context;
     }
 
-    // ✅ GET ALL EMPLOYEES
-
-    [Authorize(Roles = "Admin,Manager")]
     [HttpGet]
-    public async Task<IActionResult> GetAllEmployees()
+    public async Task<IActionResult> GetAll()
     {
-        var employees = await _context.Employees.ToListAsync();
+        // Joining Users with Roles to get the formatted Employee List
+        var query = from user in _context.Users
+                    join role in _context.Roles on user.RoleId equals role.Id
+                    select new EmployeeListItemDto
+                    {
+                        Id = user.Id,
+                        EmployeeCode = user.EmployeeCode ?? "N/A",
+                        FullName = $"{user.FirstName} {user.LastName}",
+                        Email = user.Email,
+                        Role = role.Name,
+                        IsActive = user.IsActive
+                    };
 
-        var response = employees.Select(e => new EmployeeResponseDto
+        var employees = await query.ToListAsync();
+
+        return Ok(new EmployeeResponseDto
         {
-            Id = e.Id,
-            UserId = e.UserId,
-            FirstName = e.FirstName,
-            LastName = e.LastName,
-            Department = e.Department,
-            EmployeeCode = e.EmployeeCode,
-            ManagerId = e.ManagerId,
-            EmploymentStatus = e.EmploymentStatus,
-            CreatedAt = e.CreatedAt
+            Success = true,
+            Data = employees
         });
-
-        return Ok(response);
     }
 
-    // ✅ GET EMPLOYEE BY ID
-    [Authorize(Roles = "Admin,Manager")]
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetEmployeeById(Guid id)
+    public async Task<IActionResult> GetById(Guid id)
     {
-        var employee = await _context.Employees.FindAsync(id);
+        // Manual join to fetch a specific employee's details with their Role name
+        var employee = await (from user in _context.Users
+                              join role in _context.Roles on user.RoleId equals role.Id
+                              where user.Id == id
+                              select new EmployeeListItemDto
+                              {
+                                  Id = user.Id,
+                                  EmployeeCode = user.EmployeeCode ?? "N/A",
+                                  FullName = $"{user.FirstName} {user.LastName}",
+                                  Email = user.Email,
+                                  Role = role.Name,
+                                  IsActive = user.IsActive
+                              }).FirstOrDefaultAsync();
 
         if (employee == null)
-            return NotFound("Employee not found");
-
-        var response = new EmployeeResponseDto
         {
-            Id = employee.Id,
-            UserId = employee.UserId,
-            FirstName = employee.FirstName,
-            LastName = employee.LastName,
-            Department = employee.Department,
-            EmployeeCode = employee.EmployeeCode,
-            ManagerId = employee.ManagerId,
-            EmploymentStatus = employee.EmploymentStatus,
-            CreatedAt = employee.CreatedAt
-        };
+            return NotFound(new { Success = false, Message = "Employee not found" });
+        }
 
-        return Ok(response);
-    }
-
-    // ✅ CREATE EMPLOYEE 
-    [Authorize(Roles = "Admin,Manager")]
-    [HttpPost]
-    public async Task<IActionResult> CreateEmployee(Employee employee)
-    {
-        if (employee == null)
-            return BadRequest("Invalid data");
-
-        // 🔥 CHECK: User must exist (ER relationship)
-        var userExists = await _context.Users.AnyAsync(u => u.Id == employee.UserId);
-        if (!userExists)
-            return BadRequest("Invalid UserId");
-
-        employee.Id = Guid.NewGuid();
-
-        _context.Employees.Add(employee);
-        await _context.SaveChangesAsync();
-
-        return Ok(new EmployeeResponseDto
-        {
-            Id = employee.Id,
-            UserId = employee.UserId,
-            FirstName = employee.FirstName,
-            LastName = employee.LastName,
-            Department = employee.Department,
-            EmployeeCode = employee.EmployeeCode,
-            ManagerId = employee.ManagerId,
-            EmploymentStatus = employee.EmploymentStatus,
-            CreatedAt = employee.CreatedAt
+        return Ok(new EmployeeDetailResponseDto 
+        { 
+            Success = true, 
+            Data = employee 
         });
     }
 
-    // ✅ UPDATE EMPLOYEE 
-    [Authorize(Roles = "Admin,Manager")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateEmployee(Guid id, Employee updatedEmployee)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateEmployeeDto dto)
     {
-        var employee = await _context.Employees.FindAsync(id);
-
-        if (employee == null)
-            return NotFound("Employee not found");
-
-        // 🔥 CHECK: User must exist
-        var userExists = await _context.Users.AnyAsync(u => u.Id == updatedEmployee.UserId);
-        if (!userExists)
-            return BadRequest("Invalid UserId");
-
-        employee.FirstName = updatedEmployee.FirstName;
-        employee.LastName = updatedEmployee.LastName;
-        employee.Department = updatedEmployee.Department;
-        employee.EmployeeCode = updatedEmployee.EmployeeCode;
-        employee.UserId = updatedEmployee.UserId;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(new EmployeeResponseDto
+        var user = await _context.Users.FindAsync(id);
+        
+        if (user == null)
         {
-            Id = employee.Id,
-            UserId = employee.UserId,
-            FirstName = employee.FirstName,
-            LastName = employee.LastName,
-            Department = employee.Department,
-            EmployeeCode = employee.EmployeeCode,
-            ManagerId = employee.ManagerId,
-            EmploymentStatus = employee.EmploymentStatus,
-            CreatedAt = employee.CreatedAt
-        });
-    }
+            return NotFound(new { Success = false, Message = "Employee not found" });
+        }
 
-    // ✅ DELETE EMPLOYEE
-    [Authorize(Roles = "Admin")]
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteEmployee(Guid id)
-    {
-        var employee = await _context.Employees.FindAsync(id);
+        // Apply updates from the DTO to the User entity
+        user.FirstName = dto.FirstName;
+        user.LastName = dto.LastName;
+        user.Email = dto.Email;
+        user.IsActive = dto.IsActive;
 
-        if (employee == null)
-            return NotFound("Employee not found");
-
-        _context.Employees.Remove(employee);
         await _context.SaveChangesAsync();
 
-        return Ok("Employee deleted successfully");
+        return Ok(new { Success = true, Message = "Employee updated successfully" });
     }
 }

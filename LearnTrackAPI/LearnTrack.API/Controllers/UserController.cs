@@ -1,12 +1,13 @@
-﻿using LearnTrack.Core.Entities;
-using LearnTrack.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LearnTrack.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using LearnTrack.Core.DTOs;
+using System.Security.Claims;
+using LearnTrack.API.DTOs;
 
 namespace LearnTrack.API.Controllers;
-[Authorize(Roles ="Admin")]
+
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase
@@ -18,109 +19,29 @@ public class UserController : ControllerBase
         _context = context;
     }
 
-    // ✅ GET ALL USERS
-    [HttpGet]
-    public async Task<IActionResult> GetAllUsers()
+    [HttpGet("Profile")]
+    public async Task<IActionResult> GetProfile()
     {
-        var users = await _context.Users.ToListAsync();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null) return Unauthorized();
+        
+        var userId = Guid.Parse(userIdClaim);
 
-        var response = users.Select(user => new UserResponseDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            RoleId = user.RoleId,
-            IsActive = user.IsActive,
-            CreatedAt = user.CreatedAt
-        });
+        var user = await (from u in _context.Users
+                          join r in _context.Roles on u.RoleId equals r.Id
+                          where u.Id == userId
+                          select new EmployeeListItemDto
+                          {
+                              Id = u.Id,
+                              EmployeeCode = u.EmployeeCode ?? "N/A",
+                              FullName = $"{u.FirstName} {u.LastName}",
+                              Email = u.Email,
+                              Role = r.Name,
+                              IsActive = u.IsActive
+                          }).FirstOrDefaultAsync();
 
-        return Ok(response);
-    }
+        if (user == null) return NotFound(new { Success = false, Message = "User profile not found" });
 
-    // ✅ GET USER BY ID
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUserById(Guid id)
-    {
-        var user = await _context.Users.FindAsync(id);
-
-        if (user == null)
-            return NotFound("User not found");
-
-        var response = new UserResponseDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            RoleId = user.RoleId,
-            IsActive = user.IsActive,
-            CreatedAt = user.CreatedAt
-        };
-        return Ok(response);
-    }
-
-    // ✅ CREATE USER
-    [AllowAnonymous]
-    [HttpPost]
-    public async Task<IActionResult> CreateUser(User user)
-    {
-        if (user == null)
-            return BadRequest("Invalid data");
-        //Validation for Email and Password Required
-        if (string.IsNullOrEmpty(user.Email) || string.IsNullOrEmpty(user.PasswordHash))
-            return BadRequest("Email and Password are required");
-
-        user.Id = Guid.NewGuid(); // ensure id
-        user.CreatedAt = DateTime.UtcNow;
-        user.IsActive = true;
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-
-        return Ok(new UserResponseDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            RoleId = user.RoleId,
-            IsActive = user.IsActive,
-            CreatedAt = user.CreatedAt
-        });
-    }
-
-    // ✅ UPDATE USER
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateUser(Guid id, User updatedUser)
-    {
-        var user = await _context.Users.FindAsync(id);
-
-        if (user == null)
-            return NotFound("User not found");
-
-        user.Email = updatedUser.Email;
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updatedUser.PasswordHash);
-        user.RoleId = updatedUser.RoleId;
-        user.IsActive = updatedUser.IsActive;
-
-        await _context.SaveChangesAsync();
-        return Ok(new UserResponseDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            RoleId = user.RoleId,
-            IsActive = user.IsActive,
-            CreatedAt = user.CreatedAt
-        });
-    }
-
-    // ✅ DELETE USER
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
-    {
-        var user = await _context.Users.FindAsync(id);
-
-        if (user == null)
-            return NotFound("User not found");
-
-        _context.Users.Remove(user);
-        await _context.SaveChangesAsync();
-
-        return Ok("User deleted successfully");
+        return Ok(new { Success = true, Data = user });
     }
 }
