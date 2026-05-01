@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using LearnTrack.Infrastructure.Data;
 using LearnTrack.Core.Entities;
 using Microsoft.EntityFrameworkCore;
-using LearnTrack.API.DTOs;
+using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
