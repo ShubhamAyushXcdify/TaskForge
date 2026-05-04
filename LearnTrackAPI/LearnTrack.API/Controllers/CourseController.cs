@@ -27,7 +27,6 @@ public class CourseController : ControllerBase
         if (userIdClaim == null) return Unauthorized();
         var userId = Guid.Parse(userIdClaim);
 
-        // MANUAL JOIN: Fetches assignment details linked with Course, Category, and Provider
         var query = from assignment in _context.CourseAssignments
                     join course in _context.Courses on assignment.CourseId equals course.Id
                     join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
@@ -71,11 +70,10 @@ public class CourseController : ControllerBase
         return Ok(response);
     }
 
-    [Authorize(Roles = "Admin,Manager,Employee")]
+    [Authorize(Roles = "Admin,Manager,Employee,User")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        // MANUAL JOIN: Fetches all courses with their Category and Provider names
         var query = from course in _context.Courses
                     join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
                     join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
@@ -98,6 +96,48 @@ public class CourseController : ControllerBase
             Data = coursesList
         });
     }
+
+    // ==================== NEW ENDPOINT - Get Course by ID ====================
+[Authorize(Roles = "Admin,Manager,Employee,User")]
+[HttpGet("{id}")]
+public async Task<IActionResult> GetById(Guid id)
+{
+    var query = from course in _context.Courses
+                join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
+                join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
+                where course.Id == id
+                select new CourseDetailDto
+                {
+                    Id = course.Id,
+                    Title = course.Title,
+                    Description = course.Description ?? string.Empty,
+                    DurationHours = (double)course.DurationHours,
+                    IsActive = course.IsActive,
+                    CreatedAt = course.CreatedAt,
+                    CategoryName = category.Name,
+                    ProviderName = provider.Name,
+                    // ProviderWebsite = provider.Website,   ← Removed this line (causing error)
+                    TotalAssignments = _context.CourseAssignments.Count(ca => ca.CourseId == course.Id)
+                };
+
+    var courseDetail = await query.FirstOrDefaultAsync();
+
+    if (courseDetail == null)
+    {
+        return NotFound(new CourseDetailResponseDto
+        {
+            Success = false,
+            Message = $"Course with ID {id} not found."
+        });
+    }
+
+    return Ok(new CourseDetailResponseDto
+    {
+        Success = true,
+        Message = "Course retrieved successfully",
+        Data = courseDetail
+    });
+}
 
     [Authorize(Roles = "Manager,Admin")]
     [HttpPost]
