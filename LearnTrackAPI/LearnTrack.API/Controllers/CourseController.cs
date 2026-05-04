@@ -21,54 +21,71 @@ public class CourseController : ControllerBase
     }
 
     [HttpGet("MyCourses")]
-    public async Task<IActionResult> GetMyCourses()
+public async Task<IActionResult> GetMyCourses()
+{
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (userIdClaim == null) 
+        return Unauthorized(new { Success = false, Message = "User not authenticated" });
+
+    var userId = Guid.Parse(userIdClaim);
+
+    // Get Employee ID from User ID
+    var employee = await _context.Employees
+        .FirstOrDefaultAsync(e => e.UserId == userId);
+
+    if (employee == null)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userIdClaim == null) return Unauthorized();
-        var userId = Guid.Parse(userIdClaim);
-
-        var query = from assignment in _context.CourseAssignments
-                    join course in _context.Courses on assignment.CourseId equals course.Id
-                    join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
-                    join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
-                    where assignment.EmployeeId == userId
-                    select new CourseAssignmentDetailsDto
-                    {
-                        AssignmentId = assignment.Id,
-                        CourseId = course.Id,
-                        CourseTitle = course.Title,
-                        CourseCategory = category.Name,
-                        ProviderName = provider.Name,
-                        DurationHours = (double)course.DurationHours,
-                        AssignedDate = assignment.CreatedAt,
-                        Status = assignment.Status,
-                        ProgressPercentage = (double)assignment.ProgressPercentage,
-                        StartedAt = assignment.StartDate,
-                        CompletedAt = assignment.CompletionDate
-                    };
-
-        var assignmentList = await query.ToListAsync();
-
-        var response = new MyCoursesResponseDto
+        return Ok(new MyCoursesResponseDto
         {
             Success = true,
-            Message = "My courses retrieved successfully",
-            Data = new CourseDataDto
-            {
-                Summary = new CourseSummaryDto
-                {
-                    TotalAssigned = assignmentList.Count,
-                    TotalCompleted = assignmentList.Count(x => x.Status == "Completed"),
-                    TotalInProgress = assignmentList.Count(x => x.Status == "InProgress"),
-                    TotalPending = assignmentList.Count(x => x.Status == "Assigned" || x.Status == "Pending"),
-                    TotalOverdue = 0 
-                },
-                Assignments = assignmentList
-            }
-        };
-
-        return Ok(response);
+            Message = "No employee profile found for this user",
+            Data = new CourseDataDto()
+        });
     }
+
+    // Fetch assignments for this employee
+    var query = from assignment in _context.CourseAssignments
+                join course in _context.Courses on assignment.CourseId equals course.Id
+                join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
+                join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
+                where assignment.EmployeeId == employee.Id
+                select new CourseAssignmentDetailsDto
+                {
+                    AssignmentId = assignment.Id,
+                    CourseId = course.Id,
+                    CourseTitle = course.Title,
+                    CourseCategory = category.Name,
+                    ProviderName = provider.Name,
+                    DurationHours = (double)course.DurationHours,
+                    AssignedDate = assignment.CreatedAt,
+                    Status = assignment.Status,
+                    ProgressPercentage = (double)assignment.ProgressPercentage,
+                    StartedAt = assignment.StartDate,
+                    CompletedAt = assignment.CompletionDate
+                };
+
+    var assignmentList = await query.ToListAsync();
+
+    var response = new MyCoursesResponseDto
+    {
+        Success = true,
+        Message = assignmentList.Any() ? "My courses retrieved successfully" : "No courses assigned to you yet",
+        Data = new CourseDataDto
+        {
+            Summary = new CourseSummaryDto
+            {
+                TotalAssigned = assignmentList.Count,
+                TotalCompleted = assignmentList.Count(x => x.Status == "Completed"),
+                TotalInProgress = assignmentList.Count(x => x.Status == "InProgress"),
+                TotalPending = assignmentList.Count(x => x.Status == "Assigned" || x.Status == "Pending"),
+                TotalOverdue = 0
+            },
+            Assignments = assignmentList
+        }
+    };
+
+    return Ok(response);
+}
 
     [Authorize(Roles = "Admin,Manager,Employee,User")]
     [HttpGet]
