@@ -1,0 +1,41 @@
+{
+  "stats": {
+    "totalUsers": 148,
+    "activeUsers": 112,
+    "activeCourses": 24,
+    "completionRate": 67,
+    "pendingTasks": 9,
+    "totalHoursLogged": 3240,
+    "certificatesIssued": 312,
+    "avgScore": 84
+  },
+  "weeklyEnrollments": [
+    { "week": "W1", "count": 18 },
+    { "week": "W2", "count": 24 },
+    { "week": "W3", "count": 19 },
+    { "week": "W4", "count": 31 },
+    { "week": "W5", "count": 27 },
+    { "week": "W6", "count": 35 }
+  ],
+  "departmentProgress": [
+    { "dept": "Engineering",  "completion": 74, "users": 42 },
+    { "dept": "Design",       "completion": 81, "users": 18 },
+    { "dept": "Marketing",    "completion": 55, "users": 24 },
+    { "dept": "Operations",   "completion": 62, "users": 31 },
+    { "dept": "HR",           "completion": 88, "users": 14 },
+    { "dept": "Finance",      "completion": 49, "users": 19 }
+  ],
+  "recentActivity": [
+    { "id": "a1", "user": "Manil Sharma",   "action": "Completed",  "course": "React Advanced Patterns",    "time": "2m ago",   "type": "completed" },
+    { "id": "a2", "user": "Priya Nair",     "action": "Enrolled in","course": "AWS Cloud Practitioner",     "time": "14m ago",  "type": "enrolled"  },
+    { "id": "a3", "user": "Rahul Gupta",    "action": "Scored 94% on","course": "System Design Quiz",      "time": "1h ago",   "type": "quiz"      },
+    { "id": "a4", "user": "Sneha Iyer",     "action": "Completed",  "course": "TypeScript Deep Dive",       "time": "2h ago",   "type": "completed" },
+    { "id": "a5", "user": "Arjun Mehta",    "action": "Enrolled in","course": "Docker & Containers",        "time": "3h ago",   "type": "enrolled"  },
+    { "id": "a6", "user": "Kavya Reddy",    "action": "Earned cert:","course": "Node.js Security",         "time": "5h ago",   "type": "cert"      }
+  ],
+  "notifications": [
+    { "id": "n1", "title": "Q2 Compliance Training",    "message": "All employees must complete by May 15.", "sentAt": "2026-04-20", "reach": 148 },
+    { "id": "n2", "title": "New Course Available",       "message": "GraphQL Advanced Patterns is live.",    "sentAt": "2026-04-18", "reach": 92  },
+    { "id": "n3", "title": "Reminder: Pending Courses",  "message": "9 employees have overdue courses.",     "sentAt": "2026-04-15", "reach": 9   }
+  ]
+}
