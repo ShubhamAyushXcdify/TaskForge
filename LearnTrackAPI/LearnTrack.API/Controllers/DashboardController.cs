@@ -26,8 +26,21 @@ public class DashboardController : ControllerBase
         if (userIdClaim == null) return Unauthorized();
         var userId = Guid.Parse(userIdClaim);
 
+        // Get EmployeeId from UserId
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        if (employee == null)
+        {
+            return Ok(new DashboardStatsResponse 
+            { 
+                Success = true, 
+                Data = new DashboardStatsDto() 
+            });
+        }
+
         var assignments = await _context.CourseAssignments
-            .Where(a => a.EmployeeId == userId)
+            .Where(a => a.EmployeeId == employee.Id)
             .ToListAsync();
 
         int totalAssigned = assignments.Count;
@@ -35,8 +48,9 @@ public class DashboardController : ControllerBase
         int inProgress = assignments.Count(a => a.Status == "In Progress");
         int notStarted = assignments.Count(a => a.Status == "Pending");
 
-        // Calculate total hours from the Courses table for completed assignments
-        var completedCourseIds = assignments.Where(a => a.Status == "Completed").Select(a => a.CourseId).ToList();
+        var completedCourseIds = assignments.Where(a => a.Status == "Completed")
+            .Select(a => a.CourseId).ToList();
+
         var totalHours = await _context.Courses
             .Where(c => completedCourseIds.Contains(c.Id))
             .SumAsync(c => (double)c.DurationHours);
@@ -58,8 +72,6 @@ public class DashboardController : ControllerBase
     [HttpGet("weekly-hours")]
     public async Task<IActionResult> GetWeeklyHours()
     {
-        // Weekly tracking usually requires a dedicated 'LearningLogs' table.
-        // Returning an empty structure for now to keep your API working.
         var data = new WeeklyHoursDataDto
         {
             ThisWeek = new List<DayHourDto>(),
@@ -70,36 +82,43 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("category-breakdown")]
-public async Task<IActionResult> GetCategoryBreakdown()
-{
-    var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (userIdClaim == null) return Unauthorized();
-    var userId = Guid.Parse(userIdClaim);
-
-    // Using CourseCategoryId instead of CategoryId to match your schema
-    var query = from assignment in _context.CourseAssignments
-                join course in _context.Courses on assignment.CourseId equals course.Id
-                join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
-                where assignment.EmployeeId == userId
-                group category by category.Name into g
-                select new
-                {
-                    Category = g.Key,
-                    Count = g.Count()
-                };
-
-    var results = await query.ToListAsync();
-    int total = results.Sum(r => r.Count);
-
-    var breakdown = results.Select(r => new CategoryBreakdownDto
+    public async Task<IActionResult> GetCategoryBreakdown()
     {
-        Category = r.Category,
-        Count = r.Count,
-        Percentage = total > 0 ? Math.Round((double)r.Count / total * 100, 2) : 0
-    }).ToList();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null) return Unauthorized();
+        var userId = Guid.Parse(userIdClaim);
 
-    return Ok(new CategoryBreakdownResponse { Success = true, Data = breakdown });
-}
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        if (employee == null)
+        {
+            return Ok(new CategoryBreakdownResponse { Success = true, Data = new List<CategoryBreakdownDto>() });
+        }
+
+        var query = from assignment in _context.CourseAssignments
+                    join course in _context.Courses on assignment.CourseId equals course.Id
+                    join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
+                    where assignment.EmployeeId == employee.Id
+                    group category by category.Name into g
+                    select new
+                    {
+                        Category = g.Key,
+                        Count = g.Count()
+                    };
+
+        var results = await query.ToListAsync();
+        int total = results.Sum(r => r.Count);
+
+        var breakdown = results.Select(r => new CategoryBreakdownDto
+        {
+            Category = r.Category,
+            Count = r.Count,
+            Percentage = total > 0 ? Math.Round((double)r.Count / total * 100, 2) : 0
+        }).ToList();
+
+        return Ok(new CategoryBreakdownResponse { Success = true, Data = breakdown });
+    }
 
     [HttpGet("activity")]
     public async Task<IActionResult> GetActivity()
@@ -108,10 +127,17 @@ public async Task<IActionResult> GetCategoryBreakdown()
         if (userIdClaim == null) return Unauthorized();
         var userId = Guid.Parse(userIdClaim);
 
-        // Fetching the 5 most recent activities based on assignment creation
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        if (employee == null)
+        {
+            return Ok(new ActivityResponse { Success = true, Data = new List<ActivityDto>() });
+        }
+
         var activities = await (from assignment in _context.CourseAssignments
                                 join course in _context.Courses on assignment.CourseId equals course.Id
-                                where assignment.EmployeeId == userId
+                                where assignment.EmployeeId == employee.Id
                                 orderby assignment.CreatedAt descending
                                 select new ActivityDto
                                 {
