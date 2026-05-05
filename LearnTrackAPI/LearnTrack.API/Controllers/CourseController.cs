@@ -8,7 +8,7 @@ using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize]
+[Authorize]   // Any authenticated user can access
 [ApiController]
 [Route("api/[controller]")]
 public class CourseController : ControllerBase
@@ -85,7 +85,7 @@ public class CourseController : ControllerBase
         return Ok(response);
     }
 
-    [Authorize(Roles = "Admin,Manager,Employee,User")]
+    [Authorize]   // ← Changed to allow any authenticated user
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -112,7 +112,7 @@ public class CourseController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Admin,Manager,Employee,User")]
+    [Authorize]   // ← Changed to allow any authenticated user
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {

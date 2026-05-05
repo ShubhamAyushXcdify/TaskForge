@@ -7,7 +7,7 @@ using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize(Roles = "Admin,Manager,User")]
+[Authorize]        // ← Changed to allow any logged-in user
 [ApiController]
 [Route("api/[controller]")]
 public class AssignmentController : ControllerBase
