@@ -152,7 +152,6 @@ public class CourseController : ControllerBase
         });
     }
 
-    // ==================== FIXED CREATE METHOD ====================
     [Authorize(Roles = "Manager,Admin")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Course course)
@@ -160,7 +159,6 @@ public class CourseController : ControllerBase
         if (course == null)
             return BadRequest("Invalid course data");
 
-        // Auto-generate ID (ignore what client sends)
         course.Id = Guid.NewGuid();
         course.CreatedAt = DateTime.UtcNow;
         course.IsActive = true;
@@ -171,7 +169,6 @@ public class CourseController : ControllerBase
             course.CreatedBy = Guid.Parse(userId);
         }
 
-        // Validate foreign keys
         var providerExists = await _context.CourseProviders.AnyAsync(x => x.Id == course.CourseProviderId);
         if (!providerExists) return BadRequest("Invalid CourseProviderId");
 

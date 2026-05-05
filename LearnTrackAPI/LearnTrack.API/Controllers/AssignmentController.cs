@@ -25,24 +25,20 @@ public class AssignmentController : ControllerBase
         if (dto == null)
             return BadRequest(new { Success = false, Message = "Invalid data" });
 
-        // Validate Course exists
         var courseExists = await _context.Courses.AnyAsync(c => c.Id == dto.CourseId);
         if (!courseExists) 
             return BadRequest(new { Success = false, Message = "Invalid Course ID" });
 
-        // Validate Employee exists
         var employeeExists = await _context.Employees.AnyAsync(e => e.Id == dto.EmployeeId);
         if (!employeeExists) 
             return BadRequest(new { Success = false, Message = "Invalid Employee ID" });
 
-        // Check if already assigned
         var alreadyAssigned = await _context.CourseAssignments
             .AnyAsync(a => a.CourseId == dto.CourseId && a.EmployeeId == dto.EmployeeId);
 
         if (alreadyAssigned) 
             return BadRequest(new { Success = false, Message = "Course already assigned to this employee" });
 
-        // Auto generate ID
         var assignment = new CourseAssignment
         {
             Id = Guid.NewGuid(),
