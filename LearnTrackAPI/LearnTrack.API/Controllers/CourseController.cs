@@ -21,71 +21,69 @@ public class CourseController : ControllerBase
     }
 
     [HttpGet("MyCourses")]
-public async Task<IActionResult> GetMyCourses()
-{
-    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    if (userIdClaim == null) 
-        return Unauthorized(new { Success = false, Message = "User not authenticated" });
-
-    var userId = Guid.Parse(userIdClaim);
-
-    // Get Employee ID from User ID
-    var employee = await _context.Employees
-        .FirstOrDefaultAsync(e => e.UserId == userId);
-
-    if (employee == null)
+    public async Task<IActionResult> GetMyCourses()
     {
-        return Ok(new MyCoursesResponseDto
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null) 
+            return Unauthorized(new { Success = false, Message = "User not authenticated" });
+
+        var userId = Guid.Parse(userIdClaim);
+
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        if (employee == null)
+        {
+            return Ok(new MyCoursesResponseDto
+            {
+                Success = true,
+                Message = "No employee profile found for this user",
+                Data = new CourseDataDto()
+            });
+        }
+
+        var query = from assignment in _context.CourseAssignments
+                    join course in _context.Courses on assignment.CourseId equals course.Id
+                    join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
+                    join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
+                    where assignment.EmployeeId == employee.Id
+                    select new CourseAssignmentDetailsDto
+                    {
+                        AssignmentId = assignment.Id,
+                        CourseId = course.Id,
+                        CourseTitle = course.Title,
+                        CourseCategory = category.Name,
+                        ProviderName = provider.Name,
+                        DurationHours = (double)course.DurationHours,
+                        AssignedDate = assignment.CreatedAt,
+                        Status = assignment.Status,
+                        ProgressPercentage = (double)assignment.ProgressPercentage,
+                        StartedAt = assignment.StartDate,
+                        CompletedAt = assignment.CompletionDate
+                    };
+
+        var assignmentList = await query.ToListAsync();
+
+        var response = new MyCoursesResponseDto
         {
             Success = true,
-            Message = "No employee profile found for this user",
-            Data = new CourseDataDto()
-        });
-    }
-
-    // Fetch assignments for this employee
-    var query = from assignment in _context.CourseAssignments
-                join course in _context.Courses on assignment.CourseId equals course.Id
-                join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
-                join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
-                where assignment.EmployeeId == employee.Id
-                select new CourseAssignmentDetailsDto
-                {
-                    AssignmentId = assignment.Id,
-                    CourseId = course.Id,
-                    CourseTitle = course.Title,
-                    CourseCategory = category.Name,
-                    ProviderName = provider.Name,
-                    DurationHours = (double)course.DurationHours,
-                    AssignedDate = assignment.CreatedAt,
-                    Status = assignment.Status,
-                    ProgressPercentage = (double)assignment.ProgressPercentage,
-                    StartedAt = assignment.StartDate,
-                    CompletedAt = assignment.CompletionDate
-                };
-
-    var assignmentList = await query.ToListAsync();
-
-    var response = new MyCoursesResponseDto
-    {
-        Success = true,
-        Message = assignmentList.Any() ? "My courses retrieved successfully" : "No courses assigned to you yet",
-        Data = new CourseDataDto
-        {
-            Summary = new CourseSummaryDto
+            Message = assignmentList.Any() ? "My courses retrieved successfully" : "No courses assigned to you yet",
+            Data = new CourseDataDto
             {
-                TotalAssigned = assignmentList.Count,
-                TotalCompleted = assignmentList.Count(x => x.Status == "Completed"),
-                TotalInProgress = assignmentList.Count(x => x.Status == "InProgress"),
-                TotalPending = assignmentList.Count(x => x.Status == "Assigned" || x.Status == "Pending"),
-                TotalOverdue = 0
-            },
-            Assignments = assignmentList
-        }
-    };
+                Summary = new CourseSummaryDto
+                {
+                    TotalAssigned = assignmentList.Count,
+                    TotalCompleted = assignmentList.Count(x => x.Status == "Completed"),
+                    TotalInProgress = assignmentList.Count(x => x.Status == "InProgress"),
+                    TotalPending = assignmentList.Count(x => x.Status == "Assigned" || x.Status == "Pending"),
+                    TotalOverdue = 0
+                },
+                Assignments = assignmentList
+            }
+        };
 
-    return Ok(response);
-}
+        return Ok(response);
+    }
 
     [Authorize(Roles = "Admin,Manager,Employee,User")]
     [HttpGet]
@@ -114,70 +112,75 @@ public async Task<IActionResult> GetMyCourses()
         });
     }
 
-    // ==================== NEW ENDPOINT - Get Course by ID ====================
-[Authorize(Roles = "Admin,Manager,Employee,User")]
-[HttpGet("{id}")]
-public async Task<IActionResult> GetById(Guid id)
-{
-    var query = from course in _context.Courses
-                join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
-                join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
-                where course.Id == id
-                select new CourseDetailDto
-                {
-                    Id = course.Id,
-                    Title = course.Title,
-                    Description = course.Description ?? string.Empty,
-                    DurationHours = (double)course.DurationHours,
-                    IsActive = course.IsActive,
-                    CreatedAt = course.CreatedAt,
-                    CategoryName = category.Name,
-                    ProviderName = provider.Name,
-                    // ProviderWebsite = provider.Website,   ← Removed this line (causing error)
-                    TotalAssignments = _context.CourseAssignments.Count(ca => ca.CourseId == course.Id)
-                };
-
-    var courseDetail = await query.FirstOrDefaultAsync();
-
-    if (courseDetail == null)
+    [Authorize(Roles = "Admin,Manager,Employee,User")]
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
     {
-        return NotFound(new CourseDetailResponseDto
+        var query = from course in _context.Courses
+                    join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
+                    join provider in _context.CourseProviders on course.CourseProviderId equals provider.Id
+                    where course.Id == id
+                    select new CourseDetailDto
+                    {
+                        Id = course.Id,
+                        Title = course.Title,
+                        Description = course.Description ?? string.Empty,
+                        DurationHours = (double)course.DurationHours,
+                        IsActive = course.IsActive,
+                        CreatedAt = course.CreatedAt,
+                        CategoryName = category.Name,
+                        ProviderName = provider.Name,
+                        TotalAssignments = _context.CourseAssignments.Count(ca => ca.CourseId == course.Id)
+                    };
+
+        var courseDetail = await query.FirstOrDefaultAsync();
+
+        if (courseDetail == null)
         {
-            Success = false,
-            Message = $"Course with ID {id} not found."
+            return NotFound(new CourseDetailResponseDto
+            {
+                Success = false,
+                Message = $"Course with ID {id} not found."
+            });
+        }
+
+        return Ok(new CourseDetailResponseDto
+        {
+            Success = true,
+            Message = "Course retrieved successfully",
+            Data = courseDetail
         });
     }
 
-    return Ok(new CourseDetailResponseDto
-    {
-        Success = true,
-        Message = "Course retrieved successfully",
-        Data = courseDetail
-    });
-}
-
+    // ==================== FIXED CREATE METHOD ====================
     [Authorize(Roles = "Manager,Admin")]
     [HttpPost]
-    public async Task<IActionResult> Create(Course course)
+    public async Task<IActionResult> Create([FromBody] Course course)
     {
-        var providerExists = await _context.CourseProviders.AnyAsync(x => x.Id == course.CourseProviderId);
-        if (!providerExists) return BadRequest("Invalid CourseProviderId");
+        if (course == null)
+            return BadRequest("Invalid course data");
 
-        var categoryExists = await _context.CourseCategories.AnyAsync(x => x.Id == course.CourseCategoryId);
-        if (!categoryExists) return BadRequest("Invalid CourseCategoryId");
-
+        // Auto-generate ID (ignore what client sends)
         course.Id = Guid.NewGuid();
         course.CreatedAt = DateTime.UtcNow;
         course.IsActive = true;
-        
+
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId != null)
         {
             course.CreatedBy = Guid.Parse(userId);
         }
 
+        // Validate foreign keys
+        var providerExists = await _context.CourseProviders.AnyAsync(x => x.Id == course.CourseProviderId);
+        if (!providerExists) return BadRequest("Invalid CourseProviderId");
+
+        var categoryExists = await _context.CourseCategories.AnyAsync(x => x.Id == course.CourseCategoryId);
+        if (!categoryExists) return BadRequest("Invalid CourseCategoryId");
+
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
+
         return Ok(course);
     }
 }
