@@ -69,17 +69,24 @@ namespace LearnTrack.Core.DTOs
         public List<ActivityDto> Data { get; set; } = new(); 
     }
 
-    // To-Do
+    // To-Do DTOs
     public class TodoDto 
     { 
         public Guid Id { get; set; } 
         public string Title { get; set; } = string.Empty; 
-        public bool Completed { get; set; } 
+        public bool Completed { get; set; }  // Matches Controller
+        public DateTime DueDate { get; set; } // Matches Controller
     }
 
     public class TodoResponse 
     { 
         public bool Success { get; set; } 
         public List<TodoDto> Data { get; set; } = new(); 
+    }
+
+    public class CreateTodoDto 
+    { 
+        public string Title { get; set; } = string.Empty; 
+        public DateTime DueDate { get; set; }
     }
 }
