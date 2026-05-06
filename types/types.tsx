@@ -95,3 +95,44 @@ export type CourseCardProps = {
 export type CurrentlyLearningProps = {
   courses: CourseAssignment[];
 }
+
+export type CourseDetail = {
+  Id: string;
+  Title: string;
+  Description: string;
+  DurationHours: number;
+  IsActive: boolean;
+  CreatedAt: string;
+  CategoryName: string;
+  ProviderName: string;
+  ProviderWebsite: string | null;
+  TotalAssignments: number;
+}
+
+export type UserAssignment = {
+  ProgressPercentage: number;
+  Status: string;
+  CompletedAt: string | null;
+}
+
+export type MyCourse = {
+  AssignmentId: string;
+  CourseId: string;
+  CourseTitle: string;
+  CourseCategory: string;
+  ProviderName: string;
+  DurationHours: number;
+  Status: string;
+  ProgressPercentage: number;
+  CompletedAt: string | null;
+}
+
+export type DashboardStats= {
+  Assigned: number;
+  Completed: number;
+  InProgress: number;
+  NotStarted: number;
+  CompletionRate: number;
+  TotalHoursSpent: number;
+  AvgScore: number | null;
+}
