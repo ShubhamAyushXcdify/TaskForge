@@ -159,3 +159,10 @@ namespace LearnTrack.Core.DTOs
         public object? Data { get; set; }
     }
 }
+
+
+public class CreateCourseProviderDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Website { get; set; }
+}

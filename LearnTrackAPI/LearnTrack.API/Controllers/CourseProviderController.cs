@@ -39,15 +39,22 @@ public class CourseProviderController : ControllerBase
     }
 
     [Authorize(Roles = "Admin,Manager")]
-    [HttpPost]
-    public async Task<IActionResult> Create(CourseProvider provider)
+[HttpPost]
+public async Task<IActionResult> Create([FromBody] CreateCourseProviderDto providerDto)
+{
+    // 1. Create the actual Entity from the DTO
+    var provider = new CourseProvider
     {
-        provider.Id = Guid.NewGuid();
-        provider.CreatedAt = DateTime.UtcNow;
+        Id = Guid.NewGuid(),           // Auto-generated here
+        Name = providerDto.Name,
+        Website = providerDto.Website,
+        CreatedAt = DateTime.UtcNow    // Auto-generated here
+    };
 
-        _context.CourseProviders.Add(provider);
-        await _context.SaveChangesAsync();
-        
-        return Ok(new { Success = true, Data = provider });
-    }
+    // 2. Save to database
+    _context.CourseProviders.Add(provider);
+    await _context.SaveChangesAsync();
+    
+    return Ok(new { Success = true, Data = provider });
+}
 }
