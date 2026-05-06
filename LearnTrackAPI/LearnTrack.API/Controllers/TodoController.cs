@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LearnTrack.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using LearnTrack.Core.DTOs;
+using LearnTrack.Core.Entities;
+using System.Security.Claims;
 
 namespace LearnTrack.API.Controllers;
 
@@ -18,16 +19,46 @@ public class TodoController : ControllerBase
         _context = context;
     }
 
+    // GET: api/Todo
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        // Placeholder list to match your requested structure
-        var todos = new List<TodoDto>();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null) return Unauthorized();
 
-        return Ok(new TodoResponse 
+        var userId = Guid.Parse(userIdClaim);
+
+        var todos = await _context.Todos
+            .Where(t => t.UserId == userId)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+
+        return Ok(new { Success = true, Data = todos });
+    }
+
+    // POST: api/Todo
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] Todo todo)
+    {
+        if (todo == null || string.IsNullOrEmpty(todo.Title))
+            return BadRequest(new { Success = false, Message = "Title is required" });
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null) return Unauthorized();
+
+        todo.Id = Guid.NewGuid();
+        todo.UserId = Guid.Parse(userIdClaim);
+        todo.CreatedAt = DateTime.UtcNow;
+        todo.IsCompleted = false;
+
+        _context.Todos.Add(todo);
+        await _context.SaveChangesAsync();
+
+        return Ok(new 
         { 
             Success = true, 
-            Data = todos 
+            Message = "Todo created successfully", 
+            Data = todo 
         });
     }
 }
