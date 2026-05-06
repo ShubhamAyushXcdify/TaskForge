@@ -8,7 +8,7 @@ using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize]   // Any authenticated user can access
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class CourseController : ControllerBase
@@ -85,7 +85,6 @@ public class CourseController : ControllerBase
         return Ok(response);
     }
 
-    [Authorize]   // ← Changed to allow any authenticated user
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -112,7 +111,6 @@ public class CourseController : ControllerBase
         });
     }
 
-    [Authorize]   // ← Changed to allow any authenticated user
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -130,6 +128,7 @@ public class CourseController : ControllerBase
                         CreatedAt = course.CreatedAt,
                         CategoryName = category.Name,
                         ProviderName = provider.Name,
+                        ProviderWebsite = provider.Website, // Mapping added here
                         TotalAssignments = _context.CourseAssignments.Count(ca => ca.CourseId == course.Id)
                     };
 

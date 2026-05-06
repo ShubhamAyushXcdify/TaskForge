@@ -83,6 +83,27 @@ namespace LearnTrack.Core.DTOs
         public string? Website { get; set; }
     }
 
+    public class CourseDetailDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public double DurationHours { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+        public string ProviderName { get; set; } = string.Empty;
+        public string? ProviderWebsite { get; set; } 
+        public int TotalAssignments { get; set; }
+    }
+
+    public class CourseDetailResponseDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public CourseDetailDto? Data { get; set; }
+    }
+
     public class EmployeeResponseDto
     {
         public bool Success { get; set; }
@@ -137,27 +158,4 @@ namespace LearnTrack.Core.DTOs
         public string Message { get; set; } = string.Empty;
         public object? Data { get; set; }
     }
-}
-
-public class CourseDetailDto
-{
-    public Guid Id { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public double DurationHours { get; set; }
-    public bool IsActive { get; set; }
-    public DateTime CreatedAt { get; set; }
-
-    public string CategoryName { get; set; } = string.Empty;
-    public string ProviderName { get; set; } = string.Empty;
-    public string? ProviderWebsite { get; set; }
-
-    public int TotalAssignments { get; set; }
-}
-
-public class CourseDetailResponseDto
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public CourseDetailDto? Data { get; set; }
 }

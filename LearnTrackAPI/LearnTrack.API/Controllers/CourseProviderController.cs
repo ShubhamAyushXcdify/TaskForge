@@ -27,7 +27,7 @@ public class CourseProviderController : ControllerBase
             {
                 Id = p.Id,
                 Name = p.Name,
-                Website = p.Website // Ensure this property exists in your Entity!
+                Website = p.Website 
             })
             .ToListAsync();
 
