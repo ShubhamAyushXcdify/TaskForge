@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<Course> Courses { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+   public DbSet<Todo> Todos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

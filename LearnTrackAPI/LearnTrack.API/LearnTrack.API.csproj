@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LearnTrack.Application\LearnTrack.Application.csproj" />
     <ProjectReference Include="..\LearnTrack.Infrastructure\LearnTrack.Infrastructure.csproj" />
+    <ProjectReference Include="..\LearnTrack.Core\LearnTrack.Core.csproj" />
   </ItemGroup>
 
 </Project>

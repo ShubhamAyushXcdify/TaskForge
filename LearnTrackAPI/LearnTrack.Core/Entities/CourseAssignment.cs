@@ -28,4 +28,6 @@ public class CourseAssignment
 
     [Column("createdat")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public virtual Course? Course { get; set; }
 }

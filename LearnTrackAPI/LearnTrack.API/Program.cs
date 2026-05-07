@@ -12,12 +12,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.PropertyNamingPolicy = null);
+
 // ✅ 1.1 Email Service
 builder.Services.AddScoped<EmailService>();
+
+// ✅ 1.2 CORS Policy (REQUIRED FOR FRONTEND CONNECTION)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "http://localhost:5173") // Add your frontend URLs here
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 // ✅ 2. Database (PostgreSQL)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // ✅ 3. Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -28,7 +42,6 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 
-    // 🔐 ADD THIS PART (JWT Support)
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -88,19 +101,21 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "LearnTrack API V1");
-        c.RoutePrefix = "swagger"; // optional but safe
+        c.RoutePrefix = "swagger";
     });
 }
 
 // ✅ 7. Middleware order (VERY IMPORTANT)
 app.UseHttpsRedirection();
 
-app.UseAuthentication();   // 🔐 First authentication
-app.UseAuthorization();    // 🔐 Then authorization
+// 🌍 Use CORS before Authentication/Authorization
+app.UseCors("AllowFrontend"); 
+
+app.UseAuthentication();   
+app.UseAuthorization();    
 
 app.MapControllers();
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using LearnTrack.Infrastructure.Data;
 using LearnTrack.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
@@ -18,27 +19,42 @@ public class CourseProviderController : ControllerBase
         _context = context;
     }
 
-    // ✅ CREATE
-
-    [Authorize(Roles = "Admin,Manager")]
-    [HttpPost]
-    public async Task<IActionResult> Create(CourseProvider provider)
-    {
-        provider.Id = Guid.NewGuid();
-        provider.CreatedAt = DateTime.UtcNow;
-
-        _context.CourseProviders.Add(provider);
-        await _context.SaveChangesAsync();
-
-        return Ok(provider);
-    }
-
-    // ✅ GET ALL
-    [Authorize(Roles = "Admin,Manager,Employee")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var data = await _context.CourseProviders.ToListAsync();
-        return Ok(data);
+        var providers = await _context.CourseProviders
+            .Select(p => new CourseProviderItemDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Website = p.Website 
+            })
+            .ToListAsync();
+
+        return Ok(new CourseProviderResponseDto
+        {
+            Success = true,
+            Data = providers
+        });
     }
+
+    [Authorize(Roles = "Admin,Manager")]
+[HttpPost]
+public async Task<IActionResult> Create([FromBody] CreateCourseProviderDto providerDto)
+{
+    // 1. Create the actual Entity from the DTO
+    var provider = new CourseProvider
+    {
+        Id = Guid.NewGuid(),           // Auto-generated here
+        Name = providerDto.Name,
+        Website = providerDto.Website,
+        CreatedAt = DateTime.UtcNow    // Auto-generated here
+    };
+
+    // 2. Save to database
+    _context.CourseProviders.Add(provider);
+    await _context.SaveChangesAsync();
+    
+    return Ok(new { Success = true, Data = provider });
+}
 }

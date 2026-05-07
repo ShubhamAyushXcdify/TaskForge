@@ -1,14 +1,13 @@
-﻿using LearnTrack.Core.Entities;
-using LearnTrack.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LearnTrack.Infrastructure.Data;
+using LearnTrack.Core.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using System.Text.Json;
+using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize]
+[Authorize]        // ← Changed to allow any logged-in user
 [ApiController]
 [Route("api/[controller]")]
 public class AssignmentController : ControllerBase
@@ -20,117 +19,65 @@ public class AssignmentController : ControllerBase
         _context = context;
     }
 
-    // ✅ CREATE 
-
-    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
-    public async Task<IActionResult> AssignCourse([FromBody] CourseAssignment assignment)
+    public async Task<IActionResult> Create([FromBody] CreateAssignmentDto dto)
     {
-        if (assignment == null)
-            return BadRequest("Invalid data");
+        if (dto == null)
+            return BadRequest(new { Success = false, Message = "Invalid data" });
 
-        // Validate Employee
-        var employeeExists = await _context.Employees
-            .AnyAsync(e => e.Id == assignment.EmployeeId);
+        var courseExists = await _context.Courses.AnyAsync(c => c.Id == dto.CourseId);
+        if (!courseExists) 
+            return BadRequest(new { Success = false, Message = "Invalid Course ID" });
 
-        if (!employeeExists)
-            return BadRequest("Invalid EmployeeId");
+        var employeeExists = await _context.Employees.AnyAsync(e => e.Id == dto.EmployeeId);
+        if (!employeeExists) 
+            return BadRequest(new { Success = false, Message = "Invalid Employee ID" });
 
-        assignment.Id = Guid.NewGuid();
-        assignment.CreatedAt = DateTime.UtcNow;
+        var alreadyAssigned = await _context.CourseAssignments
+            .AnyAsync(a => a.CourseId == dto.CourseId && a.EmployeeId == dto.EmployeeId);
 
-        _context.CourseAssignments.Add(assignment);
+        if (alreadyAssigned) 
+            return BadRequest(new { Success = false, Message = "Course already assigned to this employee" });
 
-        // 🔥 Audit Log 
-
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        var audit = new AuditLog
+        var assignment = new CourseAssignment
         {
-            UserId = userIdClaim != null ? Guid.Parse(userIdClaim) : Guid.Empty,
-            ActionType = "ASSIGN_COURSE",
-            EntityName = "CourseAssignment",
-            ChangesJson = JsonSerializer.Serialize(assignment)
+            Id = Guid.NewGuid(),
+            CourseId = dto.CourseId,
+            EmployeeId = dto.EmployeeId,
+            Status = "Pending",
+            ProgressPercentage = 0,
+            CreatedAt = DateTime.UtcNow
         };
 
-        _context.AuditLogs.Add(audit);
-
+        _context.CourseAssignments.Add(assignment);
         await _context.SaveChangesAsync();
 
-        return Ok(new { Message = "Course Assigned Successfully", Id = assignment.Id });
+        return Ok(new AssignmentResponseDto 
+        { 
+            Success = true, 
+            Message = "Course assigned successfully",
+            Data = assignment
+        });
     }
 
-    // ✅ GET ALL
-
-    [Authorize(Roles = "Admin,Manager")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var data = await _context.CourseAssignments.ToListAsync();
-        return Ok(data);
-    }
+        var query = from assignment in _context.CourseAssignments
+                    join course in _context.Courses on assignment.CourseId equals course.Id
+                    join user in _context.Users on assignment.EmployeeId equals user.Id
+                    select new
+                    {
+                        assignment.Id,
+                        CourseTitle = course.Title,
+                        EmployeeName = $"{user.FirstName} {user.LastName}",
+                        assignment.Status,
+                        assignment.ProgressPercentage,
+                        assignment.CreatedAt
+                    };
 
-    // ✅ GET BY ID
+        var results = await query.ToListAsync();
 
-    [Authorize(Roles = "Admin,Manager")]
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(Guid id)
-    {
-        var item = await _context.CourseAssignments.FindAsync(id);
-
-        if (item == null)
-            return NotFound("Assignment not found");
-
-        return Ok(item);
-    }
-
-    // ✅ UPDATE
-
-    [Authorize(Roles = "Employee")]
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, CourseAssignment updated)
-    {
-        var existing = await _context.CourseAssignments.FindAsync(id);
-
-        if (existing == null)
-            return NotFound("Assignment not found");
-
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        var employee = await _context.Employees
-            .FirstOrDefaultAsync(e => e.UserId.ToString() == userId);
-
-        if (employee == null)
-            return Unauthorized("Employee not found");
-
-        // 🔐 Ownership check
-        if (existing.EmployeeId != employee.Id)
-            return Forbid("You can only update your own assignment");
-
-        existing.ProgressPercentage = updated.ProgressPercentage;
-        existing.Status = updated.Status;
-        existing.StartDate = updated.StartDate;
-        existing.CompletionDate = updated.CompletionDate;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(existing);
-    }
-
-    // ✅ DELETE
-
-    [Authorize(Roles = "Admin,Manager")]
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(Guid id)
-    {
-        var existing = await _context.CourseAssignments.FindAsync(id);
-
-        if (existing == null)
-            return NotFound("Assignment not found");
-
-        _context.CourseAssignments.Remove(existing);
-        await _context.SaveChangesAsync();
-
-        return Ok("Deleted successfully");
+        return Ok(new { Success = true, Data = results });
     }
 }
