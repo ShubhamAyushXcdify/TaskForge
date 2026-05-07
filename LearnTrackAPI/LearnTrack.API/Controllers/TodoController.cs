@@ -20,6 +20,7 @@ public class TodoController : ControllerBase
         _context = context;
     }
 
+    // GET: api/Todo
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -36,6 +37,7 @@ public class TodoController : ControllerBase
             {
                 Id = t.Id,
                 Title = t.Title,
+                Description = t.Description,
                 DueDate = t.DueDate,
                 IsCompleted = t.IsCompleted,
                 CreatedAt = t.CreatedAt
@@ -45,6 +47,7 @@ public class TodoController : ControllerBase
         return Ok(new { Success = true, Data = todos });
     }
 
+    // POST: api/Todo
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateTodoDto dto)
     {
@@ -60,6 +63,7 @@ public class TodoController : ControllerBase
             Id = Guid.NewGuid(),
             UserId = Guid.Parse(userIdClaim),
             Title = dto.Title,
+            Description = dto.Description,
             DueDate = dto.DueDate,
             IsCompleted = false,
             CreatedAt = DateTime.UtcNow
@@ -72,6 +76,7 @@ public class TodoController : ControllerBase
         {
             Id = todo.Id,
             Title = todo.Title,
+            Description = todo.Description,
             DueDate = todo.DueDate,
             IsCompleted = todo.IsCompleted,
             CreatedAt = todo.CreatedAt
@@ -81,6 +86,58 @@ public class TodoController : ControllerBase
         { 
             Success = true, 
             Message = "Todo created successfully", 
+            Data = response 
+        });
+    }
+
+    // PATCH: api/Todo/{id}
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTodoDto dto)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null) 
+            return Unauthorized(new { Success = false, Message = "User not authenticated" });
+
+        var userId = Guid.Parse(userIdClaim);
+
+        var todo = await _context.Todos
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+        if (todo == null)
+            return NotFound(new { Success = false, Message = "Todo not found" });
+
+        if (!string.IsNullOrEmpty(dto.Title))
+            todo.Title = dto.Title;
+
+        if (!string.IsNullOrEmpty(dto.Description))
+            todo.Description = dto.Description;
+
+        if (dto.DueDate.HasValue)
+            todo.DueDate = dto.DueDate;
+
+        if (dto.IsCompleted.HasValue)
+        {
+            todo.IsCompleted = dto.IsCompleted.Value;
+            if (dto.IsCompleted.Value)
+                todo.CompletedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+
+        var response = new TodoDto
+        {
+            Id = todo.Id,
+            Title = todo.Title,
+            Description = todo.Description,
+            DueDate = todo.DueDate,
+            IsCompleted = todo.IsCompleted,
+            CreatedAt = todo.CreatedAt
+        };
+
+        return Ok(new 
+        { 
+            Success = true, 
+            Message = "Todo updated successfully", 
             Data = response 
         });
     }
