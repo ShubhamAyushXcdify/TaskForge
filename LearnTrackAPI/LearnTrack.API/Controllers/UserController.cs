@@ -20,46 +20,13 @@ public class UserController : ControllerBase
         _context = context;
     }
 
-    // ✅ GET ALL USERS
+    // GET ALL USERS (Admin only)
     [HttpGet]
     public async Task<IActionResult> GetAllUsers()
     {
-        var users = await _context.Users
-            .Include(u => u.Role)           // If you have navigation property
-            .ToListAsync();
+        var users = await _context.Users.ToListAsync();
 
         var response = users.Select(user => new UserResponseDto
-        {
-            UserId = user.Id,
-            Email = user.Email,
-            Role = user.Role?.Name ?? "N/A",     // Assuming Role has Name property
-            FirstName = user.FirstName ?? "",
-            LastName = user.LastName ?? "",
-            EmployeeCode = user.EmployeeCode ?? "",
-            IsActive = user.IsActive,
-            IsEmailVerified = user.IsEmailVerified
-        }).ToList();
-
-        return Ok(new 
-        { 
-            Success = true, 
-            Message = "Users retrieved successfully",
-            Data = response 
-        });
-    }
-
-    // ✅ GET USER BY ID
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUserById(Guid id)
-    {
-        var user = await _context.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Id == id);
-
-        if (user == null)
-            return NotFound(new { Success = false, Message = "User not found" });
-
-        var response = new UserResponseDto
         {
             UserId = user.Id,
             Email = user.Email,
@@ -69,41 +36,25 @@ public class UserController : ControllerBase
             EmployeeCode = user.EmployeeCode ?? "",
             IsActive = user.IsActive,
             IsEmailVerified = user.IsEmailVerified
-        };
+        }).ToList();
 
-        return Ok(new 
-        { 
-            Success = true, 
-            Message = "User retrieved successfully",
-            Data = response 
-        });
+        return Ok(new { Success = true, Message = "Users retrieved successfully", Data = response });
     }
 
-    // ✅ CREATE USER (Registration - Public)
-    [AllowAnonymous]
-    [HttpPost]
-    public async Task<IActionResult> CreateUser(User user)
+    // GET USER BY ID
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUserById(Guid id)
     {
-        if (user == null || string.IsNullOrEmpty(user.Email) || string.IsNullOrEmpty(user.PasswordHash))
-            return BadRequest(new { Success = false, Message = "Email and Password are required" });
+        var user = await _context.Users.FindAsync(id);
 
-        if (await _context.Users.AnyAsync(u => u.Email == user.Email))
-            return BadRequest(new { Success = false, Message = "Email already exists" });
+        if (user == null)
+            return NotFound(new { Success = false, Message = "User not found" });
 
-        user.Id = Guid.NewGuid();
-        user.CreatedAt = DateTime.UtcNow;
-        user.IsActive = true;
-        user.IsEmailVerified = false;
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
-
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-
-        var responseDto = new UserResponseDto
+        var response = new UserResponseDto
         {
             UserId = user.Id,
             Email = user.Email,
-            Role = "User",                    // Default role
+            Role = "User",
             FirstName = user.FirstName ?? "",
             LastName = user.LastName ?? "",
             EmployeeCode = user.EmployeeCode ?? "",
@@ -111,71 +62,92 @@ public class UserController : ControllerBase
             IsEmailVerified = user.IsEmailVerified
         };
 
-        return Ok(new 
-        { 
-            Success = true, 
-            Message = "User created successfully",
-            Data = responseDto 
-        });
+        return Ok(new { Success = true, Message = "User retrieved successfully", Data = response });
     }
 
-    // ✅ UPDATE USER
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateUser(Guid id, User updatedUser)
+    // POST: Create User - Auto ID (No need to send Id from frontend)
+    [AllowAnonymous]
+    [HttpPost]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
-        var user = await _context.Users.FindAsync(id);
+        if (dto == null || string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.PasswordHash))
+            return BadRequest(new { Success = false, Message = "Email and Password are required" });
 
-        if (user == null)
-            return NotFound(new { Success = false, Message = "User not found" });
+        if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+            return BadRequest(new { Success = false, Message = "Email already exists" });
 
-        user.Email = updatedUser.Email;
-        user.FirstName = updatedUser.FirstName;
-        user.LastName = updatedUser.LastName;
-        user.EmployeeCode = updatedUser.EmployeeCode;
-        user.IsActive = updatedUser.IsActive;
-
-        if (!string.IsNullOrEmpty(updatedUser.PasswordHash))
+        var user = new User
         {
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updatedUser.PasswordHash);
-        }
-
-        await _context.SaveChangesAsync();
-
-        // Reload to get updated data
-        var updated = await _context.Users.FindAsync(id);
-
-        var responseDto = new UserResponseDto
-        {
-            UserId = updated.Id,
-            Email = updated.Email,
-            Role = "Updated", // You can improve this later
-            FirstName = updated.FirstName ?? "",
-            LastName = updated.LastName ?? "",
-            EmployeeCode = updated.EmployeeCode ?? "",
-            IsActive = updated.IsActive,
-            IsEmailVerified = updated.IsEmailVerified
+            Id = Guid.NewGuid(),           // Auto Generate ID
+            Email = dto.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.PasswordHash),
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            EmployeeCode = dto.EmployeeCode,
+            RoleId = dto.RoleId,
+            IsActive = true,
+            IsEmailVerified = false,
+            CreatedAt = DateTime.UtcNow
         };
 
-        return Ok(new 
-        { 
-            Success = true, 
-            Message = "User updated successfully",
-            Data = responseDto 
-        });
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var response = new UserResponseDto
+        {
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "User",
+            FirstName = user.FirstName ?? "",
+            LastName = user.LastName ?? "",
+            EmployeeCode = user.EmployeeCode ?? "",
+            IsActive = user.IsActive,
+            IsEmailVerified = user.IsEmailVerified
+        };
+
+        return Ok(new { Success = true, Message = "User created successfully", Data = response });
     }
 
-    // ✅ DELETE USER
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    // PATCH: Update User Details
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto)
     {
         var user = await _context.Users.FindAsync(id);
-
         if (user == null)
             return NotFound(new { Success = false, Message = "User not found" });
 
-        _context.Users.Remove(user);
+        if (!string.IsNullOrEmpty(dto.Email))
+            user.Email = dto.Email;
+
+        if (!string.IsNullOrEmpty(dto.FirstName))
+            user.FirstName = dto.FirstName;
+
+        if (!string.IsNullOrEmpty(dto.LastName))
+            user.LastName = dto.LastName;
+
+        if (!string.IsNullOrEmpty(dto.EmployeeCode))
+            user.EmployeeCode = dto.EmployeeCode;
+
+        if (dto.IsActive.HasValue)
+            user.IsActive = dto.IsActive.Value;
+
+        if (!string.IsNullOrEmpty(dto.PasswordHash))
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.PasswordHash);
+
         await _context.SaveChangesAsync();
 
-        return Ok(new { Success = true, Message = "User deleted successfully" });
+        var response = new UserResponseDto
+        {
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "User",
+            FirstName = user.FirstName ?? "",
+            LastName = user.LastName ?? "",
+            EmployeeCode = user.EmployeeCode ?? "",
+            IsActive = user.IsActive,
+            IsEmailVerified = user.IsEmailVerified
+        };
+
+        return Ok(new { Success = true, Message = "User updated successfully", Data = response });
     }
 }
