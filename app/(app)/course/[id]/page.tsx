@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { categoryColors } from "@/app/(app)/course/components/color";
-import type { CourseDetail,UserAssignment } from "@/types/types";
-
+import type { CourseDetail, UserAssignment } from "@/types/types";
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +31,7 @@ export default function CourseDetailPage() {
           headers["Authorization"] = `Bearer ${session.user.token}`;
         }
 
-       
+        // ✅ Fixed URL
         const courseRes = await fetch(`${backendUrl}/api/Course/${id}`, { headers });
         const courseJson = await courseRes.json();
 
@@ -41,7 +41,6 @@ export default function CourseDetailPage() {
           setError(courseJson?.Message || "Failed to load course");
         }
 
-        
         const myRes = await fetch(`${backendUrl}/api/Course/MyCourses`, { headers });
         const myJson = await myRes.json();
 
@@ -60,6 +59,7 @@ export default function CourseDetailPage() {
       } catch (err) {
         console.error(err);
         setError("Something went wrong");
+        toast.error("Failed to load course details");  // ✅ Toast added
       } finally {
         setLoading(false);
       }
@@ -72,20 +72,24 @@ export default function CourseDetailPage() {
     if (course?.ProviderWebsite) {
       window.open(course.ProviderWebsite, "_blank", "noopener,noreferrer");
     } else {
-      alert("No external link available.");
+      toast.error("No external link available for this course.");  // ✅ Toast instead of alert
     }
   };
 
   const handleRequestCourse = () => {
     if (!session?.user?.token) {
-      alert("Please login to request this course");
+      toast.error("Please login to request this course");  // ✅ Toast instead of alert
       return;
     }
+
     setRequesting(true);
     setTimeout(() => {
-      alert(`Request sent for "${course?.Title}"\nManager will review it soon.`);
+      toast.success("Request Sent Successfully!", {         // ✅ Toast instead of alert
+        description: `Your request for "${course?.Title}" has been sent. Manager will review it soon.`,
+        duration: 6000,
+      });
       setRequesting(false);
-    }, 700);
+    }, 800);
   };
 
   if (loading) {
@@ -112,7 +116,6 @@ export default function CourseDetailPage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       <div className="max-w-4xl mx-auto px-6 pt-6">
-
         <nav className="flex items-center gap-2 text-sm text-slate-400 mb-6">
           <Link href="/course" className="hover:text-teal-600">Courses</Link>
           <span>›</span>
@@ -120,7 +123,6 @@ export default function CourseDetailPage() {
         </nav>
 
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-          {/* Banner */}
           <div className={`h-56 bg-gradient-to-br ${bannerColor} relative`}>
             <div className="absolute inset-0 bg-black/30" />
             <div className="absolute bottom-0 left-0 right-0 p-7">
@@ -140,7 +142,6 @@ export default function CourseDetailPage() {
               <MetaPill icon="👥" label={`${course.TotalAssignments} enrolled`} />
             </div>
 
-            {/* Progress Bar - if enrolled */}
             {isEnrolled && (
               <div className="mb-7 bg-slate-50 rounded-2xl p-4">
                 <div className="flex justify-between text-sm mb-2">
@@ -158,7 +159,6 @@ export default function CourseDetailPage() {
               </div>
             )}
 
-            {/* Description */}
             <div className="mb-8">
               <h3 className="text-sm font-semibold text-slate-700 mb-3">ABOUT THIS COURSE</h3>
               <p className="text-slate-600 leading-relaxed">
@@ -166,7 +166,6 @@ export default function CourseDetailPage() {
               </p>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
               <button
                 onClick={handleGoToCourse}

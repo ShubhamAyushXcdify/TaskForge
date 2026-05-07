@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import type { MyCourse,DashboardStats } from "@/types/types";
-
+import { toast } from "sonner";  
+import type { MyCourse, DashboardStats } from "@/types/types";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -15,7 +15,6 @@ export default function ProfilePage() {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const token = session?.user?.token;
   const user = session?.user;
-
 
   const fullName = user?.name?.trim() || "User1";
   const initials = fullName
@@ -50,6 +49,7 @@ export default function ProfilePage() {
         if (statsData?.Success) setStats(statsData.Data);
       } catch (err) {
         console.error(err);
+        toast.error("Failed to load profile data");
       } finally {
         setLoading(false);
       }
@@ -61,13 +61,22 @@ export default function ProfilePage() {
   const completedCourses = myCourses.filter((c) => c.Status === "Completed");
   const inProgressCourses = myCourses.filter((c) => c.Status === "InProgress");
 
+  
+  const handleSaveProfile = () => {
+    // TODO: Add actual API call here later
+    toast.success("Profile updated successfully!", {
+      description: "Your changes have been saved.",
+    });
+    setEditOpen(false);
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading profile...</div>;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50/40 pb-16">
-      {/* Hero */}
+      {/* Hero Section */}
       <div className="max-w-5xl mx-auto px-6 pt-8">
         <div className="bg-gradient-to-r from-teal-700 to-teal-600 text-white rounded-3xl px-8 py-7 flex items-center justify-between">
           <div className="flex items-center gap-5">
@@ -76,9 +85,6 @@ export default function ProfilePage() {
             </div>
             <div>
               <h1 className="text-2xl font-semibold">{fullName}</h1>
-              {/* <p className="text-teal-100 text-sm mt-1">
-                {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Learn-er"}
-              </p> */}
               <p className="text-teal-100 text-sm mt-0.5">{user?.email}</p>
             </div>
           </div>
@@ -92,8 +98,9 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Rest of your page (unchanged) */}
       <div className="max-w-5xl mx-auto px-6 pt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
+        {/* Left Column - Summary & Skills */}
         <div className="lg:col-span-1 space-y-6">
           {/* Summary */}
           <div className="bg-white rounded-3xl p-6 border border-teal-100 shadow-sm">
@@ -137,7 +144,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Right Column */}
+        {/* Right Column - Certificates & History */}
         <div className="lg:col-span-2 space-y-6">
           {/* Certificates */}
           <div className="bg-white rounded-3xl p-6 border border-teal-100 shadow-sm">
@@ -213,82 +220,108 @@ export default function ProfilePage() {
 
       {/* Edit Profile Panel */}
       {editOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={() => setEditOpen(false)} />
-          <div className="w-96 bg-white h-full shadow-2xl flex flex-col">
-            <div className="p-6 border-b bg-teal-700 text-white flex justify-between items-center">
-              <h2 className="font-semibold">Edit Profile</h2>
-              <button onClick={() => setEditOpen(false)} className="text-2xl leading-none">×</button>
-            </div>
+  <div className="fixed inset-0 z-50 flex">
+    <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={() => setEditOpen(false)} />
+    <div className="w-96 bg-white h-full shadow-2xl flex flex-col">
 
-            <div className="flex-1 p-6 space-y-8 overflow-auto">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-2">Full Name</label>
-                <input 
-                  type="text" 
-                  defaultValue={fullName} 
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400" 
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-2">Date of Birth</label>
-                <input type="date" className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400" />
-              </div>
+      {/* Header */}
+      <div className="p-6 border-b bg-teal-700 text-white flex justify-between items-center">
+        <h2 className="font-semibold text-lg">Edit Profile</h2>
+        <button onClick={() => setEditOpen(false)} className="text-2xl leading-none hover:opacity-70">×</button>
+      </div>
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-2">Phone Number</label>
-                <input type="tel" placeholder="+91 XXXXX- XXXXX" className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400" />
-              </div>
+      {/* Scrollable Fields */}
+      <div className="flex-1 p-6 space-y-5 overflow-auto">
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-2">Emergency Contact</label>
-                <input type="tel" placeholder="Emergency Contact Number" className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400" />
-              </div>
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-1.5">Full Name</label>
+          <input
+            type="text"
+            defaultValue={fullName}
+            className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400 bg-slate-50 text-slate-800"
+          />
+        </div>
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-2">Bio</label>
-                <textarea 
-                  rows={4} 
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400 resize-none" 
-                  placeholder="Tell us about yourself..." 
-                />
-              </div>
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-1.5">Email</label>
+          <input
+            type="email"
+            defaultValue={user?.email || ""}
+            disabled
+            className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+          />
+        </div>
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-3">Notifications</label>
-                <div className="space-y-4">
-                  {["Email notifications", "Weekly progress digest", "Course reminders"].map((label, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <span className="text-sm">{label}</span>
-                      <div className="w-9 h-5 bg-teal-600 rounded-full relative cursor-pointer">
-                        <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 right-0.5" />
-                      </div>
-                    </div>
-                  ))}
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-1.5">Date of Birth</label>
+          <input
+            type="date"
+            className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400 bg-slate-50 text-slate-800"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-1.5">Phone Number</label>
+          <input
+            type="tel"
+            placeholder="+91 XXXXX-XXXXX"
+            className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400 bg-slate-50 text-slate-800"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-1.5">Emergency Contact</label>
+          <input
+            type="tel"
+            placeholder="Emergency Contact Number"
+            className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400 bg-slate-50 text-slate-800"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-1.5">Bio</label>
+          <textarea
+            rows={3}
+            placeholder="Tell us about yourself..."
+            className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-teal-400 bg-slate-50 text-slate-800 resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold uppercase tracking-widest text-teal-500 block mb-3">Notifications</label>
+          <div className="space-y-3">
+            {["Email notifications", "Weekly progress digest", "Course reminders"].map((label, i) => (
+              <div key={i} className="flex items-center justify-between py-2 px-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-sm text-slate-700">{label}</span>
+                <div className="w-9 h-5 bg-teal-600 rounded-full relative cursor-pointer shrink-0">
+                  <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 right-0.5 shadow-sm" />
                 </div>
               </div>
-            </div>
-
-            <div className="p-6 border-t flex gap-3">
-              <button 
-                onClick={() => setEditOpen(false)} 
-                className="flex-1 py-3 text-sm font-semibold border rounded-2xl hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => { 
-                  alert("Profile updated successfully!"); 
-                  setEditOpen(false); 
-                }} 
-                className="flex-1 py-3 text-sm font-semibold bg-teal-600 text-white rounded-2xl hover:bg-teal-700"
-              >
-                Save Changes
-              </button>
-            </div>
+            ))}
           </div>
         </div>
-      )}
+
+      </div>
+
+      {/* Footer Buttons */}
+      <div className="p-6 border-t flex gap-3 bg-white">
+        <button
+          onClick={() => setEditOpen(false)}
+          className="flex-1 py-3 text-sm font-semibold border border-slate-200 rounded-2xl hover:bg-slate-50 transition"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSaveProfile}
+          className="flex-1 py-3 text-sm font-semibold bg-teal-600 text-white rounded-2xl hover:bg-teal-700 transition"
+        >
+          Save Changes
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
     </div>
   );
 }
