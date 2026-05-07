@@ -1,0 +1,6 @@
+@LearnTrack.API_HostAddress = http://localhost:5250
+
+GET {{LearnTrack.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
