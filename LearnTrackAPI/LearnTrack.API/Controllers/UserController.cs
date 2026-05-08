@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,admin")]
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase

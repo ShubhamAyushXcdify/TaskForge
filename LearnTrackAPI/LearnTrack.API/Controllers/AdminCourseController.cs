@@ -8,7 +8,7 @@ using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,admin")]
 [ApiController]
 [Route("api/admin/courses")]
 public class AdminCourseController : ControllerBase
@@ -55,7 +55,6 @@ public class AdminCourseController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCourseById(Guid id)
     {
-        // 1. Fetch Course with basic info
         var course = await _context.Courses
             .Include(c => c.Category)
             .Include(c => c.Provider)
@@ -64,7 +63,6 @@ public class AdminCourseController : ControllerBase
         if (course == null)
             return NotFound(new { Success = false, Message = "Course not found" });
 
-        // 2. Fetch Assignments with an explicit Join to Employee to avoid the Collection error
         var assignments = await (from a in _context.CourseAssignments
                                 join emp in _context.Employees on a.EmployeeId equals emp.Id
                                 where a.CourseId == id
