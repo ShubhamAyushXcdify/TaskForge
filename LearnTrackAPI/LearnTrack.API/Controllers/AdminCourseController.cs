@@ -23,35 +23,58 @@ public class AdminCourseController : ControllerBase
    [HttpGet]
 public async Task<IActionResult> GetAllCourses()
 {
+    // We project the data first. This avoids the column naming conflict 
+    // because EF Core maps the properties explicitly.
     var courses = await _context.Courses
-        .Include(c => c.Category)
-        .Include(c => c.Provider)
-        .Include(c => c.Assignments)
         .Select(course => new
         {
             course.Id,
             course.Title,
-            course.Description,
-            Category = new { Id = course.CourseCategoryId, Name = course.Category != null ? course.Category.Name : "N/A" },
-            Provider = new { Id = course.CourseProviderId, Name = course.Provider != null ? course.Provider.Name : "N/A" },
+            // We use a null-check here to safely handle the Description
+            Description = course.Description ?? "",
+            Category = new { 
+                Id = course.CourseCategoryId, 
+                Name = course.Category != null ? course.Category.Name : "N/A" 
+            },
+            Provider = new { 
+                Id = course.CourseProviderId, 
+                Name = course.Provider != null ? course.Provider.Name : "N/A" 
+            },
             course.DurationHours,
             course.IsActive,
             course.CreatedAt,
-            Stats = new
-            {
-                TotalAssigned = course.Assignments.Count(),
-                CompletedCount = course.Assignments.Count(a => a.Status == "Completed"),
-                InProgress = course.Assignments.Count(a => a.Status == "InProgress"),
-                Pending = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned"),
-                
-                // ✅ BULLETPROOF FIX: Check Count > 0 before doing any division
-                CompletionRate = course.Assignments.Count() > 0 
-                    ? Math.Round((double)course.Assignments.Count(a => a.Status == "Completed") / (double)course.Assignments.Count() * 100, 2) 
-                    : 0
-            }
-        }).ToListAsync();
+            // We calculate counts directly in SQL (very fast)
+            AssignedCount = course.Assignments.Count(),
+            CompletedCount = course.Assignments.Count(a => a.Status == "Completed"),
+            InProgressCount = course.Assignments.Count(a => a.Status == "InProgress"),
+            PendingCount = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
+        })
+        .ToListAsync();
 
-    return Ok(new { Success = true, Data = courses });
+    // Now we calculate the CompletionRate in memory (C#) to stay safe
+    var finalResult = courses.Select(c => new
+    {
+        c.Id,
+        c.Title,
+        c.Description,
+        c.Category,
+        c.Provider,
+        c.DurationHours,
+        c.IsActive,
+        c.CreatedAt,
+        Stats = new
+        {
+            Assigned = c.AssignedCount,
+            Completed = c.CompletedCount,
+            InProgress = c.InProgressCount,
+            Pending = c.PendingCount,
+            CompletionRate = c.AssignedCount > 0 
+                ? Math.Round((double)c.CompletedCount / c.AssignedCount * 100, 2) 
+                : 0
+        }
+    }).ToList();
+
+    return Ok(new { Success = true, Data = finalResult });
 }
 
     [HttpGet("{id}")]
