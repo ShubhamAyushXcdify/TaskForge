@@ -39,13 +39,14 @@ public async Task<IActionResult> GetAllCourses()
             course.CreatedAt,
             Stats = new
             {
-                Assigned = course.Assignments.Count,
-                Completed = course.Assignments.Count(a => a.Status == "Completed"),
+                TotalAssigned = course.Assignments.Count(),
+                CompletedCount = course.Assignments.Count(a => a.Status == "Completed"),
                 InProgress = course.Assignments.Count(a => a.Status == "InProgress"),
                 Pending = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned"),
-                // ✅ PROFESSIONAL FIX: Check for zero before dividing
-                CompletionRate = course.Assignments.Count > 0 
-                    ? Math.Round((double)course.Assignments.Count(a => a.Status == "Completed") / course.Assignments.Count * 100, 2) 
+                
+                // ✅ BULLETPROOF FIX: Check Count > 0 before doing any division
+                CompletionRate = course.Assignments.Count() > 0 
+                    ? Math.Round((double)course.Assignments.Count(a => a.Status == "Completed") / (double)course.Assignments.Count() * 100, 2) 
                     : 0
             }
         }).ToListAsync();
