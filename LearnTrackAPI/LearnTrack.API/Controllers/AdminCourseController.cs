@@ -20,37 +20,38 @@ public class AdminCourseController : ControllerBase
         _context = context;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetAllCourses()
-    {
-        var courses = await _context.Courses
-            .Include(c => c.Category)
-            .Include(c => c.Provider)
-            .Include(c => c.Assignments)
-            .Select(course => new
+   [HttpGet]
+public async Task<IActionResult> GetAllCourses()
+{
+    var courses = await _context.Courses
+        .Include(c => c.Category)
+        .Include(c => c.Provider)
+        .Include(c => c.Assignments)
+        .Select(course => new
+        {
+            course.Id,
+            course.Title,
+            course.Description,
+            Category = new { Id = course.CourseCategoryId, Name = course.Category != null ? course.Category.Name : "N/A" },
+            Provider = new { Id = course.CourseProviderId, Name = course.Provider != null ? course.Provider.Name : "N/A" },
+            course.DurationHours,
+            course.IsActive,
+            course.CreatedAt,
+            Stats = new
             {
-                course.Id,
-                course.Title,
-                course.Description,
-                Category = new { Id = course.CourseCategoryId, Name = course.Category != null ? course.Category.Name : "N/A" },
-                Provider = new { Id = course.CourseProviderId, Name = course.Provider != null ? course.Provider.Name : "N/A" },
-                course.DurationHours,
-                course.IsActive,
-                course.CreatedAt,
-                Stats = new
-                {
-                    Assigned = course.Assignments.Count,
-                    Completed = course.Assignments.Count(a => a.Status == "Completed"),
-                    InProgress = course.Assignments.Count(a => a.Status == "InProgress"),
-                    Pending = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned"),
-                    CompletionRate = course.Assignments.Any() 
-                        ? Math.Round((double)course.Assignments.Count(a => a.Status == "Completed") / course.Assignments.Count * 100, 2) 
-                        : 0
-                }
-            }).ToListAsync();
+                Assigned = course.Assignments.Count,
+                Completed = course.Assignments.Count(a => a.Status == "Completed"),
+                InProgress = course.Assignments.Count(a => a.Status == "InProgress"),
+                Pending = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned"),
+                // ✅ PROFESSIONAL FIX: Check for zero before dividing
+                CompletionRate = course.Assignments.Count > 0 
+                    ? Math.Round((double)course.Assignments.Count(a => a.Status == "Completed") / course.Assignments.Count * 100, 2) 
+                    : 0
+            }
+        }).ToListAsync();
 
-        return Ok(new { Success = true, Data = courses });
-    }
+    return Ok(new { Success = true, Data = courses });
+}
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCourseById(Guid id)
