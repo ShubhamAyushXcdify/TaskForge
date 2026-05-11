@@ -146,11 +146,6 @@ namespace LearnTrack.Core.DTOs
         public string Name { get; set; } = string.Empty;
     }
 
-    public class CreateAssignmentDto
-    {
-        public Guid CourseId { get; set; }
-        public Guid EmployeeId { get; set; }
-    }
 
     public class AssignmentResponseDto
     {
