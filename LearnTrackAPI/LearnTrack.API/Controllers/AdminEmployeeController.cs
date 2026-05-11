@@ -25,7 +25,6 @@ public class AdminEmployeeController : ControllerBase
     {
         var employees = await _context.Employees
             .Include(e => e.User)
-            .ThenInclude(u => u.Role)
             .Select(e => new
             {
                 e.Id,
@@ -34,10 +33,7 @@ public class AdminEmployeeController : ControllerBase
                 e.FirstName,
                 e.LastName,
                 Email = e.User != null ? e.User.Email : "No Email",
-                Role = new { 
-                 Id = e.User != null ? e.User.Role.Id : Guid.Empty, 
-                 Name = e.User != null ? e.User.Role.Name : "N/A" 
-},
+                // ✅ Role object removed as requested
                 e.ManagerId,
                 ManagerName = _context.Employees
                     .Where(m => m.Id == e.ManagerId)
@@ -65,7 +61,6 @@ public class AdminEmployeeController : ControllerBase
     {
         var employee = await _context.Employees
             .Include(e => e.User)
-            .ThenInclude(u => u.Role)
             .FirstOrDefaultAsync(e => e.Id == id);
 
         if (employee == null)
@@ -99,11 +94,8 @@ public class AdminEmployeeController : ControllerBase
             employee.EmployeeCode,
             employee.FirstName,
             employee.LastName,
-           Email = employee.User?.Email ?? "No Email",
-              Role = new { 
-              Id = employee.User?.Role?.Id ?? Guid.Empty, 
-              Name = employee.User?.Role?.Name ?? "N/A" 
-            },
+            Email = employee.User?.Email ?? "No Email",
+            // ✅ Role object removed as requested
             employee.ManagerId,
             ManagerName = managerName,
             EmploymentStatus = employee.IsActive ? "Active" : "Inactive",
@@ -128,16 +120,14 @@ public class AdminEmployeeController : ControllerBase
         if (dto == null || string.IsNullOrEmpty(dto.Email))
             return BadRequest(new { Success = false, Message = "Email is required" });
 
-        // Check if user already exists
         if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
             return BadRequest(new { Success = false, Message = "User with this email already exists" });
 
-        // Create User first
         var user = new User
         {
             Id = Guid.NewGuid(),
             Email = dto.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Default@123"), // You can send password later or use invite
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Default@123"),
             FirstName = dto.FirstName,
             LastName = dto.LastName,
             RoleId = dto.RoleId,
@@ -148,7 +138,6 @@ public class AdminEmployeeController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // Create Employee
         var employee = new Employee
         {
             Id = Guid.NewGuid(),
@@ -182,7 +171,6 @@ public class AdminEmployeeController : ControllerBase
         if (updatedData.IsActive != employee.IsActive) employee.IsActive = updatedData.IsActive;
 
         employee.UpdatedAt = DateTime.UtcNow;
-
         await _context.SaveChangesAsync();
 
         return Ok(new { Success = true, Message = "Employee updated successfully" });
