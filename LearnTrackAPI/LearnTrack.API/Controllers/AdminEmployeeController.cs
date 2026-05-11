@@ -7,7 +7,7 @@ using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,admin")]
 [ApiController]
 [Route("api/admin/employees")]
 public class AdminEmployeeController : ControllerBase

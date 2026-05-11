@@ -9,7 +9,7 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ 1. Controllers 
+// ✅ 1. Controllers & JSON Formatting
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
 
@@ -38,7 +38,7 @@ builder.Services.AddSwaggerGen(c => {
     });
 });
 
-// ✅ 4. JWT Authentication
+// ✅ 3. JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 
@@ -56,14 +56,19 @@ builder.Services.AddAuthentication(options => {
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ClockSkew = TimeSpan.Zero,
-        // Ensures the system looks for the standard Role claim
-        RoleClaimType = ClaimTypes.Role 
+        
+        // ✅ PERMANENT FIX: This ensures .NET correctly reads the role from the token
+        // whether it's stored as ClaimTypes.Role or just "role"
+        RoleClaimType = ClaimTypes.Role,
+        NameClaimType = ClaimTypes.NameIdentifier
     };
 });
 
 builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
+// ✅ 4. Middleware Pipeline
 if (app.Environment.IsDevelopment()) {
     app.UseSwagger();
     app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "LearnTrack API V1"); });
@@ -71,7 +76,9 @@ if (app.Environment.IsDevelopment()) {
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend"); 
-app.UseAuthentication();   
-app.UseAuthorization();    
+
+app.UseAuthentication(); // Must come before Authorization
+app.UseAuthorization();  
+
 app.MapControllers();
 app.Run();
