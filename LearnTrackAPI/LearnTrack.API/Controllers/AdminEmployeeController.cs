@@ -19,14 +19,14 @@ public class AdminEmployeeController : ControllerBase
         _context = context;
     }
 
-    // 1. GET: api/admin/employees (Now Filters Out Admins)
+    // 1. GET: api/admin/employees (Filters out Admins)
     [HttpGet]
     public async Task<IActionResult> GetAllEmployees()
     {
         var employees = await _context.Employees
             .Include(e => e.User)
             .ThenInclude(u => u.Role)
-            // ✅ FIX: Only show employees whose User Role is NOT Admin or admin
+            // ✅ Only show users who are NOT Admins
             .Where(e => e.User != null && e.User.Role != null && 
                         e.User.Role.Name != "Admin" && e.User.Role.Name != "admin")
             .Select(e => new
@@ -42,7 +42,7 @@ public class AdminEmployeeController : ControllerBase
                     .Where(m => m.Id == e.ManagerId)
                     .Select(m => m.FirstName + " " + m.LastName)
                     .FirstOrDefault() ?? "N/A",
-                EmploymentStatus = e.IsActive ? "Active" : "Inactive",
+                EmploymentStatus = e.EmploymentStatus,
                 e.IsActive,
                 e.CreatedAt,
                 Stats = new
@@ -100,7 +100,8 @@ public class AdminEmployeeController : ControllerBase
             Email = employee.User?.Email ?? "No Email",
             employee.ManagerId,
             ManagerName = managerName,
-            EmploymentStatus = employee.IsActive ? "Active" : "Inactive",
+            employee.EmploymentStatus,
+            employee.IsActive,
             employee.CreatedAt,
             Stats = new
             {
@@ -125,13 +126,14 @@ public class AdminEmployeeController : ControllerBase
         if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
             return BadRequest(new { Success = false, Message = "User with this email already exists" });
 
-        // ✅ User logic
+        // ✅ If no password is provided, use a default fallback
+        string passwordToHash = string.IsNullOrEmpty(dto.Password) ? "Default@123" : dto.Password;
+
         var user = new User
         {
             Id = Guid.NewGuid(),
             Email = dto.Email,
-            // Password is set here but @JsonIgnore in the Entity prevents it from showing in GET responses
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Default@123"), 
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(passwordToHash), 
             FirstName = dto.FirstName,
             LastName = dto.LastName,
             RoleId = dto.RoleId,
@@ -142,7 +144,6 @@ public class AdminEmployeeController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // ✅ Employee logic
         var employee = new Employee
         {
             Id = Guid.NewGuid(),
@@ -163,13 +164,12 @@ public class AdminEmployeeController : ControllerBase
             new { Success = true, Message = "Employee created successfully", EmployeeId = employee.Id });
     }
 
-    // 4. PATCH: api/admin/employees/{id} (General Update)
+    // 4. PATCH: api/admin/employees/{id}
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] Employee updatedData)
     {
         var employee = await _context.Employees.FindAsync(id);
-        if (employee == null)
-            return NotFound(new { Success = false, Message = "Employee not found" });
+        if (employee == null) return NotFound();
 
         if (!string.IsNullOrEmpty(updatedData.FirstName)) employee.FirstName = updatedData.FirstName;
         if (!string.IsNullOrEmpty(updatedData.LastName)) employee.LastName = updatedData.LastName;
@@ -181,20 +181,16 @@ public class AdminEmployeeController : ControllerBase
         return Ok(new { Success = true, Message = "Employee updated successfully" });
     }
 
-    // 5. PATCH: api/admin/employees/{id}/status (New Status Toggle)
+    // 5. PATCH: api/admin/employees/{id}/status
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] StatusUpdateDto dto)
     {
         var employee = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
-        
-        if (employee == null)
-            return NotFound(new { Success = false, Message = "Employee not found" });
+        if (employee == null) return NotFound();
 
-        // Update IsActive and EmploymentStatus
         employee.IsActive = dto.IsActive;
-        employee.EmploymentStatus = dto.IsActive ? "Active" : "Inactive";
+        employee.EmploymentStatus = !string.IsNullOrEmpty(dto.EmploymentStatus) ? dto.EmploymentStatus : (dto.IsActive ? "Active" : "Inactive");
         
-        // Update the linked user status as well so they can't login if inactive
         if (employee.User != null)
         {
             employee.User.IsActive = dto.IsActive;
@@ -203,12 +199,6 @@ public class AdminEmployeeController : ControllerBase
         employee.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        return Ok(new { Success = true, Message = $"Employee status updated to {(dto.IsActive ? "Active" : "Inactive")}" });
+        return Ok(new { Success = true, Message = "Employee status updated successfully" });
     }
-}
-
-// 6. Simple DTO for status update
-public class StatusUpdateDto
-{
-    public bool IsActive { get; set; }
 }

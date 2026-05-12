@@ -8,10 +8,13 @@ public class CreateEmployeeDto
     public string EmployeeCode { get; set; } = string.Empty;
     public Guid RoleId { get; set; }
     public Guid? ManagerId { get; set; }
+    
+    // ✅ Added so password isn't "auto-stored" without a choice
+    public string? Password { get; set; } 
 }
 
 public class StatusUpdateDto 
 {
-    public bool isActive { get; set; }
-    public string EmploymentStatus { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+    public string? EmploymentStatus { get; set; }
 }

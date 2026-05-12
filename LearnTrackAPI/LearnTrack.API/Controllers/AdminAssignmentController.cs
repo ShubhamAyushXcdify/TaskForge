@@ -38,6 +38,7 @@ public class AdminAssignmentController : ControllerBase
                         category = cat.Name,
                         status = a.Status,
                         progressPercentage = a.ProgressPercentage,
+                        // ✅ FIX: Referencing 'a' (Assignment table) for dates
                         dueDate = a.DueDate,
                         startedAt = a.StartDate,
                         completedAt = a.CompletionDate,
@@ -66,6 +67,7 @@ public class AdminAssignmentController : ControllerBase
                                     course = new { c.Id, Title = c.Title, Category = cat.Name, c.DurationHours, Provider = p.Name },
                                     status = a.Status,
                                     progressPercentage = a.ProgressPercentage,
+                                    // ✅ FIX: Referencing 'a' (Assignment table) for dates
                                     dueDate = a.DueDate,
                                     startedAt = a.StartDate,
                                     completedAt = a.CompletionDate,
@@ -127,7 +129,6 @@ public class AdminAssignmentController : ControllerBase
         var assignment = await _context.CourseAssignments.FindAsync(id);
         if (assignment == null) return NotFound();
 
-        // Optional logic: only update if the value is provided in the JSON
         if (dto.ProgressPercentage.HasValue) assignment.ProgressPercentage = dto.ProgressPercentage.Value;
         if (!string.IsNullOrEmpty(dto.Status)) assignment.Status = dto.Status;
         if (dto.LastAccessedAt.HasValue) assignment.LastAccessedAt = dto.LastAccessedAt;
@@ -152,7 +153,6 @@ public class AdminAssignmentController : ControllerBase
 
         assignment.Status = dto.Status;
         assignment.UpdatedAt = DateTime.UtcNow;
-        // You could also save the 'reason' in an audit log or a remarks column if it exists
 
         await _context.SaveChangesAsync();
 
