@@ -23,29 +23,29 @@ public class AdminAssignmentController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllAssignments()
     {
-        var query = from a in _context.CourseAssignments
-                    join e in _context.Employees on a.EmployeeId equals e.Id
-                    join c in _context.Courses on a.CourseId equals c.Id
-                    join cat in _context.CourseCategories on c.CourseCategoryId equals cat.Id
-                    select new
-                    {
-                        assignmentId = a.Id,
-                        employeeId = e.Id,
-                        employeeName = e.FirstName + " " + e.LastName,
-                        employeeCode = e.EmployeeCode,
-                        courseId = c.Id,
-                        courseTitle = c.Title,
-                        category = cat.Name,
-                        status = a.Status,
-                        progressPercentage = a.ProgressPercentage,
-                        // ✅ FIX: Referencing 'a' (Assignment table) for dates
-                        dueDate = a.DueDate,
-                        startedAt = a.StartDate,
-                        completedAt = a.CompletionDate,
-                        lastAccessedAt = a.LastAccessedAt
-                    };
+        var result = await _context.CourseAssignments
+            .Include(a => a.Employee)
+            .Include(a => a.Course)
+                .ThenInclude(c => c!.CourseCategory)
+            .Select(a => new
+            {
+                assignmentId = a.Id,
+                employeeId = a.EmployeeId,
+                employeeName = a.Employee != null ? a.Employee.FirstName + " " + a.Employee.LastName : "N/A",
+                employeeCode = a.Employee != null ? a.Employee.EmployeeCode : "N/A",
+                courseId = a.CourseId,
+                courseTitle = a.Course != null ? a.Course.Title : "N/A",
+                // ✅ Matches the CourseCategory property in Course.cs
+                category = a.Course != null && a.Course.CourseCategory != null ? a.Course.CourseCategory.Name : "N/A",
+                status = a.Status,
+                progressPercentage = a.ProgressPercentage,
+                dueDate = a.DueDate,
+                startedAt = a.StartDate,
+                completedAt = a.CompletionDate,
+                lastAccessedAt = a.LastAccessedAt
+            })
+            .ToListAsync();
 
-        var result = await query.ToListAsync();
         return Ok(new { assignments = result, total = result.Count });
     }
 
@@ -53,29 +53,31 @@ public class AdminAssignmentController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetAssignmentById(Guid id)
     {
-        var assignment = await (from a in _context.CourseAssignments
-                                join e in _context.Employees on a.EmployeeId equals e.Id
-                                join u in _context.Users on e.UserId equals u.Id
-                                join c in _context.Courses on a.CourseId equals c.Id
-                                join cat in _context.CourseCategories on c.CourseCategoryId equals cat.Id
-                                join p in _context.CourseProviders on c.CourseProviderId equals p.Id
-                                where a.Id == id
-                                select new
-                                {
-                                    assignmentId = a.Id,
-                                    employee = new { e.Id, Name = e.FirstName + " " + e.LastName, e.EmployeeCode, u.Email },
-                                    course = new { c.Id, Title = c.Title, Category = cat.Name, c.DurationHours, Provider = p.Name },
-                                    status = a.Status,
-                                    progressPercentage = a.ProgressPercentage,
-                                    // ✅ FIX: Referencing 'a' (Assignment table) for dates
-                                    dueDate = a.DueDate,
-                                    startedAt = a.StartDate,
-                                    completedAt = a.CompletionDate,
-                                    lastAccessedAt = a.LastAccessedAt
-                                }).FirstOrDefaultAsync();
+        var a = await _context.CourseAssignments
+            .Include(a => a.Employee)
+                .ThenInclude(e => e!.User)
+            .Include(a => a.Course)
+                .ThenInclude(c => c!.CourseCategory)
+            .Include(a => a.Course)
+                .ThenInclude(c => c!.CourseProvider)
+            .FirstOrDefaultAsync(x => x.Id == id);
 
-        if (assignment == null) return NotFound(new { message = "Assignment not found" });
-        return Ok(assignment);
+        if (a == null) return NotFound(new { message = "Assignment not found" });
+
+        var response = new
+        {
+            assignmentId = a.Id,
+            employee = new { a.Employee?.Id, Name = a.Employee?.FirstName + " " + a.Employee?.LastName, a.Employee?.EmployeeCode, a.Employee?.User?.Email },
+            course = new { a.Course?.Id, a.Course?.Title, Category = a.Course?.CourseCategory?.Name, a.Course?.DurationHours, Provider = a.Course?.CourseProvider?.Name },
+            status = a.Status,
+            progressPercentage = a.ProgressPercentage,
+            dueDate = a.DueDate,
+            startedAt = a.StartDate,
+            completedAt = a.CompletionDate,
+            lastAccessedAt = a.LastAccessedAt
+        };
+
+        return Ok(response);
     }
 
     // 3. POST: api/admin/assignments (Bulk Assign)
@@ -122,7 +124,7 @@ public class AdminAssignmentController : ControllerBase
         return Ok(new { assigned = newAssignments, totalAssigned = newAssignments.Count });
     }
 
-    // 4. PATCH: api/admin/assignments/{id} (Partial Update)
+    // 4. PATCH: api/admin/assignments/{id}
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateAssignment(Guid id, [FromBody] UpdateAssignmentDto dto)
     {

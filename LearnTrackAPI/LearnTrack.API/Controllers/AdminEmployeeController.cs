@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using LearnTrack.Infrastructure.Data;
 using LearnTrack.Core.Entities;
-using Microsoft.EntityFrameworkCore;
 using LearnTrack.Core.DTOs;
 
 namespace LearnTrack.API.Controllers;
@@ -19,14 +19,13 @@ public class AdminEmployeeController : ControllerBase
         _context = context;
     }
 
-    // 1. GET: api/admin/employees (Filters out Admins)
+    // 1. GET: api/admin/employees (Filters Out Admins)
     [HttpGet]
     public async Task<IActionResult> GetAllEmployees()
     {
         var employees = await _context.Employees
             .Include(e => e.User)
-            .ThenInclude(u => u.Role)
-            // ✅ Only show users who are NOT Admins
+            .ThenInclude(u => u!.Role)
             .Where(e => e.User != null && e.User.Role != null && 
                         e.User.Role.Name != "Admin" && e.User.Role.Name != "admin")
             .Select(e => new
@@ -42,7 +41,7 @@ public class AdminEmployeeController : ControllerBase
                     .Where(m => m.Id == e.ManagerId)
                     .Select(m => m.FirstName + " " + m.LastName)
                     .FirstOrDefault() ?? "N/A",
-                EmploymentStatus = e.EmploymentStatus,
+                e.EmploymentStatus,
                 e.IsActive,
                 e.CreatedAt,
                 Stats = new
@@ -69,26 +68,21 @@ public class AdminEmployeeController : ControllerBase
         if (employee == null)
             return NotFound(new { Success = false, Message = "Employee not found" });
 
-        var assignments = await (from a in _context.CourseAssignments
-                                 join c in _context.Courses on a.CourseId equals c.Id
-                                 join cat in _context.CourseCategories on c.CourseCategoryId equals cat.Id
-                                 where a.EmployeeId == id
-                                 select new
-                                 {
-                                     AssignmentId = a.Id,
-                                     CourseTitle = c.Title,
-                                     Category = cat.Name,
-                                     DurationHours = c.DurationHours,
-                                     a.Status,
-                                     a.ProgressPercentage,
-                                     StartedAt = a.StartDate,
-                                     CompletedAt = a.CompletionDate
-                                 }).ToListAsync();
-
-        var managerName = await _context.Employees
-            .Where(m => m.Id == employee.ManagerId)
-            .Select(m => m.FirstName + " " + m.LastName)
-            .FirstOrDefaultAsync() ?? "N/A";
+        var assignments = await _context.CourseAssignments
+            .Include(a => a.Course)
+                // ✅ Matches the updated property in Course.cs
+                .ThenInclude(c => c!.CourseCategory) 
+            .Where(a => a.EmployeeId == id)
+            .Select(a => new {
+                AssignmentId = a.Id,
+                CourseTitle = a.Course != null ? a.Course.Title : "N/A",
+                // ✅ Updated to use CourseCategory
+                Category = (a.Course != null && a.Course.CourseCategory != null) ? a.Course.CourseCategory.Name : "N/A",
+                a.Status,
+                a.ProgressPercentage,
+                StartedAt = a.StartDate,
+                CompletedAt = a.CompletionDate
+            }).ToListAsync();
 
         var response = new
         {
@@ -99,17 +93,9 @@ public class AdminEmployeeController : ControllerBase
             employee.LastName,
             Email = employee.User?.Email ?? "No Email",
             employee.ManagerId,
-            ManagerName = managerName,
             employee.EmploymentStatus,
             employee.IsActive,
             employee.CreatedAt,
-            Stats = new
-            {
-                Assigned = assignments.Count,
-                Completed = assignments.Count(a => a.Status == "Completed"),
-                InProgress = assignments.Count(a => a.Status == "InProgress"),
-                Pending = assignments.Count(a => a.Status == "Pending")
-            },
             Assignments = assignments
         };
 
@@ -124,18 +110,21 @@ public class AdminEmployeeController : ControllerBase
             return BadRequest(new { Success = false, Message = "Email is required" });
 
         if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
-            return BadRequest(new { Success = false, Message = "User with this email already exists" });
+            return BadRequest(new { Success = false, Message = "Email already exists" });
 
-        // ✅ If no password is provided, use a default fallback
+        if (await _context.Employees.AnyAsync(e => e.EmployeeCode == dto.EmployeeCode))
+            return BadRequest(new { Success = false, Message = "Employee Code already exists" });
+
         string passwordToHash = string.IsNullOrEmpty(dto.Password) ? "Default@123" : dto.Password;
 
         var user = new User
         {
             Id = Guid.NewGuid(),
             Email = dto.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(passwordToHash), 
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(passwordToHash),
             FirstName = dto.FirstName,
             LastName = dto.LastName,
+            EmployeeCode = dto.EmployeeCode,
             RoleId = dto.RoleId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -164,24 +153,7 @@ public class AdminEmployeeController : ControllerBase
             new { Success = true, Message = "Employee created successfully", EmployeeId = employee.Id });
     }
 
-    // 4. PATCH: api/admin/employees/{id}
-    [HttpPatch("{id}")]
-    public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] Employee updatedData)
-    {
-        var employee = await _context.Employees.FindAsync(id);
-        if (employee == null) return NotFound();
-
-        if (!string.IsNullOrEmpty(updatedData.FirstName)) employee.FirstName = updatedData.FirstName;
-        if (!string.IsNullOrEmpty(updatedData.LastName)) employee.LastName = updatedData.LastName;
-        if (updatedData.ManagerId.HasValue) employee.ManagerId = updatedData.ManagerId;
-        
-        employee.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        return Ok(new { Success = true, Message = "Employee updated successfully" });
-    }
-
-    // 5. PATCH: api/admin/employees/{id}/status
+    // 4. PATCH: api/admin/employees/{id}/status
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] StatusUpdateDto dto)
     {
@@ -191,14 +163,28 @@ public class AdminEmployeeController : ControllerBase
         employee.IsActive = dto.IsActive;
         employee.EmploymentStatus = !string.IsNullOrEmpty(dto.EmploymentStatus) ? dto.EmploymentStatus : (dto.IsActive ? "Active" : "Inactive");
         
-        if (employee.User != null)
-        {
-            employee.User.IsActive = dto.IsActive;
-        }
+        if (employee.User != null) employee.User.IsActive = dto.IsActive;
 
         employee.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        return Ok(new { Success = true, Message = "Employee status updated successfully" });
+        return Ok(new { Success = true, Message = "Status updated" });
+    }
+
+    // 5. PATCH: api/admin/employees/{id} (General Update)
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] Employee updatedData)
+    {
+        var employee = await _context.Employees.FindAsync(id);
+        if (employee == null) return NotFound();
+
+        if (!string.IsNullOrEmpty(updatedData.FirstName)) employee.FirstName = updatedData.FirstName;
+        if (!string.IsNullOrEmpty(updatedData.LastName)) employee.LastName = updatedData.LastName;
+        if (updatedData.ManagerId.HasValue) employee.ManagerId = updatedData.ManagerId;
+
+        employee.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Success = true, Message = "Employee updated" });
     }
 }

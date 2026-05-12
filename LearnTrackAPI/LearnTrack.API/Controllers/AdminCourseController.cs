@@ -20,69 +20,73 @@ public class AdminCourseController : ControllerBase
         _context = context;
     }
 
-   [HttpGet]
-public async Task<IActionResult> GetAllCourses()
-{
-    // We project the data first. This avoids the column naming conflict 
-    // because EF Core maps the properties explicitly.
-    var courses = await _context.Courses
-        .Select(course => new
-        {
-            course.Id,
-            course.Title,
-            // We use a null-check here to safely handle the Description
-            Description = course.Description ?? "",
-            Category = new { 
-                Id = course.CourseCategoryId, 
-                Name = course.Category != null ? course.Category.Name : "N/A" 
-            },
-            Provider = new { 
-                Id = course.CourseProviderId, 
-                Name = course.Provider != null ? course.Provider.Name : "N/A" 
-            },
-            course.DurationHours,
-            course.IsActive,
-            course.CreatedAt,
-            // We calculate counts directly in SQL (very fast)
-            AssignedCount = course.Assignments.Count(),
-            CompletedCount = course.Assignments.Count(a => a.Status == "Completed"),
-            InProgressCount = course.Assignments.Count(a => a.Status == "InProgress"),
-            PendingCount = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
-        })
-        .ToListAsync();
-
-    // Now we calculate the CompletionRate in memory (C#) to stay safe
-    var finalResult = courses.Select(c => new
+    [HttpGet]
+    public async Task<IActionResult> GetAllCourses()
     {
-        c.Id,
-        c.Title,
-        c.Description,
-        c.Category,
-        c.Provider,
-        c.DurationHours,
-        c.IsActive,
-        c.CreatedAt,
-        Stats = new
-        {
-            Assigned = c.AssignedCount,
-            Completed = c.CompletedCount,
-            InProgress = c.InProgressCount,
-            Pending = c.PendingCount,
-            CompletionRate = c.AssignedCount > 0 
-                ? Math.Round((double)c.CompletedCount / c.AssignedCount * 100, 2) 
-                : 0
-        }
-    }).ToList();
+        // We project the data first. This avoids the column naming conflict 
+        // because EF Core maps the properties explicitly.
+        var courses = await _context.Courses
+            .Select(course => new
+            {
+                course.Id,
+                course.Title,
+                // We use a null-check here to safely handle the Description
+                Description = course.Description ?? "",
+                Category = new { 
+                    Id = course.CourseCategoryId, 
+                    // ✅ Updated from .Category to .CourseCategory
+                    Name = course.CourseCategory != null ? course.CourseCategory.Name : "N/A" 
+                },
+                Provider = new { 
+                    Id = course.CourseProviderId, 
+                    // ✅ Updated from .Provider to .CourseProvider
+                    Name = course.CourseProvider != null ? course.CourseProvider.Name : "N/A" 
+                },
+                course.DurationHours,
+                course.IsActive,
+                course.CreatedAt,
+                // We calculate counts directly in SQL (very fast)
+                AssignedCount = course.Assignments.Count(),
+                CompletedCount = course.Assignments.Count(a => a.Status == "Completed"),
+                InProgressCount = course.Assignments.Count(a => a.Status == "InProgress"),
+                PendingCount = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
+            })
+            .ToListAsync();
 
-    return Ok(new { Success = true, Data = finalResult });
-}
+        // Now we calculate the CompletionRate in memory (C#) to stay safe
+        var finalResult = courses.Select(c => new
+        {
+            c.Id,
+            c.Title,
+            c.Description,
+            c.Category,
+            c.Provider,
+            c.DurationHours,
+            c.IsActive,
+            c.CreatedAt,
+            Stats = new
+            {
+                Assigned = c.AssignedCount,
+                Completed = c.CompletedCount,
+                InProgress = c.InProgressCount,
+                Pending = c.PendingCount,
+                CompletionRate = c.AssignedCount > 0 
+                    ? Math.Round((double)c.CompletedCount / c.AssignedCount * 100, 2) 
+                    : 0
+            }
+        }).ToList();
+
+        return Ok(new { Success = true, Data = finalResult });
+    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCourseById(Guid id)
     {
         var course = await _context.Courses
-            .Include(c => c.Category)
-            .Include(c => c.Provider)
+            // ✅ Updated from .Category to .CourseCategory
+            .Include(c => c.CourseCategory)
+            // ✅ Updated from .Provider to .CourseProvider
+            .Include(c => c.CourseProvider)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (course == null)
@@ -107,8 +111,10 @@ public async Task<IActionResult> GetAllCourses()
             course.Id,
             course.Title,
             course.Description,
-            Category = new { Id = course.CourseCategoryId, Name = course.Category?.Name ?? "N/A" },
-            Provider = new { Id = course.CourseProviderId, Name = course.Provider?.Name ?? "N/A" },
+            // ✅ Updated from .Category to .CourseCategory
+            Category = new { Id = course.CourseCategoryId, Name = course.CourseCategory?.Name ?? "N/A" },
+            // ✅ Updated from .Provider to .CourseProvider
+            Provider = new { Id = course.CourseProviderId, Name = course.CourseProvider?.Name ?? "N/A" },
             course.DurationHours,
             course.IsActive,
             course.CreatedAt,
