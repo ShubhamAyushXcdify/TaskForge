@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LearnTrack.Core.Entities;
 
@@ -34,7 +32,6 @@ public class Course
     [Column("createdat")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // ✅ Navigation Properties - Named to match your Controller's ".ThenInclude" calls
     [ForeignKey("CourseCategoryId")]
     public virtual CourseCategory? CourseCategory { get; set; }
 

@@ -1,10 +1,19 @@
-﻿namespace LearnTrack.Core.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace LearnTrack.Core.Entities;
+
+[Table("courseproviders")]
+public class CourseProvider
 {
-    public class CourseProvider
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
-        public string? Website { get; set; }
-    }
+    [Column("id")]
+    public Guid Id { get; set; }
+
+    [Column("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [Column("createdat")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("website")]
+    public string? Website { get; set; }
 }

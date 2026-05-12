@@ -83,6 +83,12 @@ namespace LearnTrack.Core.DTOs
         public string? Website { get; set; }
     }
 
+    public class CreateCourseProviderDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Website { get; set; }
+    }
+
     public class CourseDetailDto
     {
         public Guid Id { get; set; }
@@ -93,7 +99,7 @@ namespace LearnTrack.Core.DTOs
         public DateTime CreatedAt { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public string ProviderName { get; set; } = string.Empty;
-        public string? ProviderWebsite { get; set; } 
+        public string? ProviderWebsite { get; set; }
         public int TotalAssignments { get; set; }
     }
 
@@ -103,61 +109,4 @@ namespace LearnTrack.Core.DTOs
         public string Message { get; set; } = string.Empty;
         public CourseDetailDto? Data { get; set; }
     }
-
-    public class EmployeeResponseDto
-    {
-        public bool Success { get; set; }
-        public List<EmployeeListItemDto> Data { get; set; } = new();
-    }
-
-    public class EmployeeListItemDto
-    {
-        public Guid Id { get; set; }
-        public string EmployeeCode { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-    }
-
-    public class EmployeeDetailResponseDto
-    {
-        public bool Success { get; set; }
-        public EmployeeListItemDto Data { get; set; } = new();
-    }
-
-    public class UpdateEmployeeDto
-    {
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
-    }
-
-    public class RoleResponseDto
-    {
-        public bool Success { get; set; }
-        public List<RoleItemDto> Data { get; set; } = new();
-    }
-
-    public class RoleItemDto
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
-
-
-    public class AssignmentResponseDto
-    {
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public object? Data { get; set; }
-    }
-}
-
-
-public class CreateCourseProviderDto
-{
-    public string Name { get; set; } = string.Empty;
-    public string? Website { get; set; }
 }

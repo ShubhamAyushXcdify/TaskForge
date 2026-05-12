@@ -19,162 +19,186 @@ public class AdminAssignmentController : ControllerBase
         _context = context;
     }
 
-    // 1. GET: api/admin/assignments
+    // GET: api/admin/assignments
     [HttpGet]
     public async Task<IActionResult> GetAllAssignments()
     {
-        var result = await _context.CourseAssignments
-            .Include(a => a.Employee)
-            .Include(a => a.Course)
-                .ThenInclude(c => c!.CourseCategory)
-            .Select(a => new
-            {
-                assignmentId = a.Id,
-                employeeId = a.EmployeeId,
-                employeeName = a.Employee != null ? a.Employee.FirstName + " " + a.Employee.LastName : "N/A",
-                employeeCode = a.Employee != null ? a.Employee.EmployeeCode : "N/A",
-                courseId = a.CourseId,
-                courseTitle = a.Course != null ? a.Course.Title : "N/A",
-                // ✅ Matches the CourseCategory property in Course.cs
-                category = a.Course != null && a.Course.CourseCategory != null ? a.Course.CourseCategory.Name : "N/A",
-                status = a.Status,
-                progressPercentage = a.ProgressPercentage,
-                dueDate = a.DueDate,
-                startedAt = a.StartDate,
-                completedAt = a.CompletionDate,
-                lastAccessedAt = a.LastAccessedAt
-            })
-            .ToListAsync();
-
-        return Ok(new { assignments = result, total = result.Count });
-    }
-
-    // 2. GET: api/admin/assignments/{id}
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetAssignmentById(Guid id)
-    {
-        var a = await _context.CourseAssignments
-            .Include(a => a.Employee)
-                .ThenInclude(e => e!.User)
+        var data = await _context.CourseAssignments
             .Include(a => a.Course)
                 .ThenInclude(c => c!.CourseCategory)
             .Include(a => a.Course)
                 .ThenInclude(c => c!.CourseProvider)
+            .Include(a => a.Employee)
+            .ToListAsync();
+
+        var assignments = data.Select(a => new
+        {
+            AssignmentId      = a.Id,
+            CourseId          = a.CourseId,
+            CourseTitle       = a.Course?.Title ?? "N/A",
+            Category          = a.Course?.CourseCategory?.Name ?? "N/A",
+            ProviderName      = a.Course?.CourseProvider?.Name ?? "N/A",
+            EmployeeId        = a.EmployeeId,
+            EmployeeName      = a.Employee != null ? $"{a.Employee.FirstName} {a.Employee.LastName}".Trim() : "N/A",
+            EmployeeCode      = a.Employee?.EmployeeCode ?? "N/A",
+            Status            = a.Status ?? "Unknown",
+            ProgressPercentage = a.ProgressPercentage,
+            DueDate           = a.DueDate,
+            StartedAt         = a.StartDate,
+            CompletedAt       = a.CompletionDate,
+            LastAccessedAt    = a.LastAccessedAt,
+            CreatedAt         = a.CreatedAt
+        }).ToList();
+
+        return Ok(new { Success = true, Assignments = assignments, Total = assignments.Count });
+    }
+
+    // GET: api/admin/assignments/{id}
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetAssignmentById(Guid id)
+    {
+        var a = await _context.CourseAssignments
+            .Include(a => a.Course)
+                .ThenInclude(c => c!.CourseCategory)
+            .Include(a => a.Course)
+                .ThenInclude(c => c!.CourseProvider)
+            .Include(a => a.Employee)
             .FirstOrDefaultAsync(x => x.Id == id);
 
-        if (a == null) return NotFound(new { message = "Assignment not found" });
+        if (a == null)
+            return NotFound(new { Success = false, Message = "Assignment not found" });
 
-        var response = new
+        return Ok(new { Success = true, Data = new
         {
-            assignmentId = a.Id,
-            employee = new { a.Employee?.Id, Name = a.Employee?.FirstName + " " + a.Employee?.LastName, a.Employee?.EmployeeCode, a.Employee?.User?.Email },
-            course = new { a.Course?.Id, a.Course?.Title, Category = a.Course?.CourseCategory?.Name, a.Course?.DurationHours, Provider = a.Course?.CourseProvider?.Name },
-            status = a.Status,
-            progressPercentage = a.ProgressPercentage,
-            dueDate = a.DueDate,
-            startedAt = a.StartDate,
-            completedAt = a.CompletionDate,
-            lastAccessedAt = a.LastAccessedAt
-        };
-
-        return Ok(response);
+            AssignmentId       = a.Id,
+            CourseId           = a.CourseId,
+            CourseTitle        = a.Course?.Title ?? "N/A",
+            Category           = a.Course?.CourseCategory?.Name ?? "N/A",
+            ProviderName       = a.Course?.CourseProvider?.Name ?? "N/A",
+            EmployeeId         = a.EmployeeId,
+            EmployeeName       = a.Employee != null ? $"{a.Employee.FirstName} {a.Employee.LastName}".Trim() : "N/A",
+            EmployeeCode       = a.Employee?.EmployeeCode ?? "N/A",
+            Status             = a.Status ?? "Unknown",
+            ProgressPercentage = a.ProgressPercentage,
+            DueDate            = a.DueDate,
+            StartedAt          = a.StartDate,
+            CompletedAt        = a.CompletionDate,
+            LastAccessedAt     = a.LastAccessedAt,
+            CreatedAt          = a.CreatedAt
+        }});
     }
 
-    // 3. POST: api/admin/assignments (Bulk Assign)
-    [HttpPost]
-    public async Task<IActionResult> AssignCourse([FromBody] CreateAssignmentDto dto)
+    // POST: api/admin/assignments
+    // POST: api/admin/assignments
+[HttpPost]
+public async Task<IActionResult> AssignCourse([FromBody] CreateAssignmentDto dto)
+{
+    if (dto == null || dto.EmployeeIds == null || !dto.EmployeeIds.Any())
+        return BadRequest(new { Success = false, Message = "At least one employee is required" });
+
+    var course = await _context.Courses.FindAsync(dto.CourseId);
+    if (course == null)
+        return NotFound(new { Success = false, Message = "Course not found" });
+
+    var results = new List<object>();
+
+    foreach (var employeeId in dto.EmployeeIds)
     {
-        var course = await _context.Courses.FindAsync(dto.CourseId);
-        if (course == null) return BadRequest("Invalid Course ID");
-
-        var newAssignments = new List<object>();
-
-        foreach (var empId in dto.EmployeeIds)
+        var employee = await _context.Employees.FindAsync(employeeId);
+        if (employee == null)
         {
-            var employee = await _context.Employees.FindAsync(empId);
-            if (employee == null) continue;
-
-            var assignment = new CourseAssignment
-            {
-                Id = Guid.NewGuid(),
-                EmployeeId = empId,
-                CourseId = dto.CourseId,
-                Status = "Assigned",
-                ProgressPercentage = 0,
-                DueDate = dto.DueDate,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.CourseAssignments.Add(assignment);
-            
-            newAssignments.Add(new {
-                assignmentId = assignment.Id,
-                employeeId = empId,
-                employeeName = employee.FirstName + " " + employee.LastName,
-                courseId = course.Id,
-                courseTitle = course.Title,
-                status = assignment.Status,
-                progressPercentage = 0,
-                dueDate = assignment.DueDate,
-                createdAt = assignment.CreatedAt
-            });
+            results.Add(new { EmployeeId = employeeId, Success = false, Message = "Employee not found" });
+            continue;
         }
 
-        await _context.SaveChangesAsync();
-        return Ok(new { assigned = newAssignments, totalAssigned = newAssignments.Count });
+        var exists = await _context.CourseAssignments
+            .AnyAsync(a => a.EmployeeId == employeeId && a.CourseId == dto.CourseId);
+        if (exists)
+        {
+            results.Add(new { EmployeeId = employeeId, Success = false, Message = "Already assigned" });
+            continue;
+        }
+
+        var assignment = new CourseAssignment
+        {
+            Id                 = Guid.NewGuid(),
+            EmployeeId         = employeeId,
+            CourseId           = dto.CourseId,
+            Status             = "Assigned",
+            ProgressPercentage = 0,
+            DueDate            = dto.DueDate,
+            CreatedAt          = DateTime.UtcNow
+        };
+
+        _context.CourseAssignments.Add(assignment);
+        results.Add(new { EmployeeId = employeeId, Success = true, Message = "Assigned successfully" });
     }
 
-    // 4. PATCH: api/admin/assignments/{id}
-    [HttpPatch("{id}")]
-    public async Task<IActionResult> UpdateAssignment(Guid id, [FromBody] UpdateAssignmentDto dto)
-    {
-        var assignment = await _context.CourseAssignments.FindAsync(id);
-        if (assignment == null) return NotFound();
+    await _context.SaveChangesAsync();
+    return Ok(new { Success = true, Results = results });
+}
 
-        if (dto.ProgressPercentage.HasValue) assignment.ProgressPercentage = dto.ProgressPercentage.Value;
-        if (!string.IsNullOrEmpty(dto.Status)) assignment.Status = dto.Status;
-        if (dto.LastAccessedAt.HasValue) assignment.LastAccessedAt = dto.LastAccessedAt;
+    // PATCH: api/admin/assignments/{id}
+    // PATCH: api/admin/assignments/{id}
+[HttpPatch("{id}")]
+public async Task<IActionResult> UpdateAssignment(Guid id, [FromBody] UpdateAssignmentDto dto)
+{
+    var assignment = await _context.CourseAssignments.FindAsync(id);
+    if (assignment == null)
+        return NotFound(new { Success = false, Message = "Assignment not found" });
 
-        assignment.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+    if (dto.ProgressPercentage.HasValue)
+        assignment.ProgressPercentage = (decimal)dto.ProgressPercentage.Value;
 
-        return Ok(new { 
-            assignmentId = assignment.Id, 
-            status = assignment.Status, 
-            progressPercentage = assignment.ProgressPercentage, 
-            updatedAt = assignment.UpdatedAt 
-        });
-    }
+    if (!string.IsNullOrEmpty(dto.Status))
+        assignment.Status = dto.Status;
 
-    // 5. PATCH: api/admin/assignments/{id}/status
+    if (dto.LastAccessedAt.HasValue)
+        assignment.LastAccessedAt = dto.LastAccessedAt;
+
+    assignment.UpdatedAt = DateTime.UtcNow;
+    await _context.SaveChangesAsync();
+
+    return Ok(new { Success = true, Message = "Assignment updated successfully" });
+}
+
+    // PATCH: api/admin/assignments/{id}/status
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateAssignmentStatusDto dto)
     {
         var assignment = await _context.CourseAssignments.FindAsync(id);
-        if (assignment == null) return NotFound();
+        if (assignment == null)
+            return NotFound(new { Success = false, Message = "Assignment not found" });
 
-        assignment.Status = dto.Status;
+        assignment.Status    = dto.Status;
         assignment.UpdatedAt = DateTime.UtcNow;
+
+        // Auto-set dates based on status
+        if (dto.Status == "InProgress" && assignment.StartDate == null)
+            assignment.StartDate = DateTime.UtcNow;
+
+        if (dto.Status == "Completed")
+        {
+            assignment.CompletionDate      = DateTime.UtcNow;
+            assignment.ProgressPercentage  = 100;
+        }
 
         await _context.SaveChangesAsync();
 
-        return Ok(new { 
-            assignmentId = assignment.Id, 
-            status = assignment.Status, 
-            updatedAt = assignment.UpdatedAt 
-        });
+        return Ok(new { Success = true, Message = $"Assignment status updated to {dto.Status}" });
     }
 
-    // 6. DELETE: api/admin/assignments/{id}
+    // DELETE: api/admin/assignments/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAssignment(Guid id)
     {
         var assignment = await _context.CourseAssignments.FindAsync(id);
-        if (assignment == null) return NotFound();
+        if (assignment == null)
+            return NotFound(new { Success = false, Message = "Assignment not found" });
 
         _context.CourseAssignments.Remove(assignment);
         await _context.SaveChangesAsync();
 
-        return Ok(new { success = true, message = "Assignment deleted successfully" });
+        return Ok(new { Success = true, Message = "Assignment deleted successfully" });
     }
 }

@@ -83,10 +83,11 @@ public class EmployeeController : ControllerBase
         }
 
         // Apply updates from the DTO to the User entity
-        user.FirstName = dto.FirstName;
-        user.LastName = dto.LastName;
-        user.Email = dto.Email;
-        user.IsActive = dto.IsActive;
+        // Apply updates from the DTO to the User entity
+if (dto.FirstName != null) user.FirstName = dto.FirstName;
+if (dto.LastName != null) user.LastName = dto.LastName;
+if (dto.Email != null) user.Email = dto.Email;
+if (dto.IsActive.HasValue) user.IsActive = dto.IsActive.Value;
 
         await _context.SaveChangesAsync();
 

@@ -26,7 +26,6 @@ public class CourseAssignment
     [Column("completiondate")]
     public DateTime? CompletionDate { get; set; }
 
-    // ✅ These must exist for the Controller to compile
     [Column("duedate")]
     public DateTime? DueDate { get; set; }
 
@@ -39,7 +38,9 @@ public class CourseAssignment
     [Column("createdat")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation Properties
+    [ForeignKey("CourseId")]
     public virtual Course? Course { get; set; }
+
+    [ForeignKey("EmployeeId")]
     public virtual Employee? Employee { get; set; }
 }

@@ -23,29 +23,23 @@ public class AdminCourseController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllCourses()
     {
-        // We project the data first. This avoids the column naming conflict 
-        // because EF Core maps the properties explicitly.
         var courses = await _context.Courses
             .Select(course => new
             {
                 course.Id,
                 course.Title,
-                // We use a null-check here to safely handle the Description
                 Description = course.Description ?? "",
                 Category = new { 
                     Id = course.CourseCategoryId, 
-                    // ✅ Updated from .Category to .CourseCategory
                     Name = course.CourseCategory != null ? course.CourseCategory.Name : "N/A" 
                 },
                 Provider = new { 
                     Id = course.CourseProviderId, 
-                    // ✅ Updated from .Provider to .CourseProvider
                     Name = course.CourseProvider != null ? course.CourseProvider.Name : "N/A" 
                 },
                 course.DurationHours,
                 course.IsActive,
                 course.CreatedAt,
-                // We calculate counts directly in SQL (very fast)
                 AssignedCount = course.Assignments.Count(),
                 CompletedCount = course.Assignments.Count(a => a.Status == "Completed"),
                 InProgressCount = course.Assignments.Count(a => a.Status == "InProgress"),
@@ -53,7 +47,6 @@ public class AdminCourseController : ControllerBase
             })
             .ToListAsync();
 
-        // Now we calculate the CompletionRate in memory (C#) to stay safe
         var finalResult = courses.Select(c => new
         {
             c.Id,
@@ -83,9 +76,7 @@ public class AdminCourseController : ControllerBase
     public async Task<IActionResult> GetCourseById(Guid id)
     {
         var course = await _context.Courses
-            // ✅ Updated from .Category to .CourseCategory
             .Include(c => c.CourseCategory)
-            // ✅ Updated from .Provider to .CourseProvider
             .Include(c => c.CourseProvider)
             .FirstOrDefaultAsync(c => c.Id == id);
 
@@ -106,14 +97,12 @@ public class AdminCourseController : ControllerBase
                                     a.CompletionDate
                                 }).ToListAsync();
 
-        var response = new
+        return Ok(new { Success = true, Data = new
         {
             course.Id,
             course.Title,
             course.Description,
-            // ✅ Updated from .Category to .CourseCategory
             Category = new { Id = course.CourseCategoryId, Name = course.CourseCategory?.Name ?? "N/A" },
-            // ✅ Updated from .Provider to .CourseProvider
             Provider = new { Id = course.CourseProviderId, Name = course.CourseProvider?.Name ?? "N/A" },
             course.DurationHours,
             course.IsActive,
@@ -126,9 +115,7 @@ public class AdminCourseController : ControllerBase
                 Pending = assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
             },
             Assignments = assignments
-        };
-
-        return Ok(new { Success = true, Data = response });
+        }});
     }
 
     [HttpPost]
@@ -142,8 +129,7 @@ public class AdminCourseController : ControllerBase
         course.IsActive = true;
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId != null)
-            course.CreatedBy = Guid.Parse(userId);
+        if (userId != null) course.CreatedBy = Guid.Parse(userId);
 
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
@@ -156,8 +142,7 @@ public class AdminCourseController : ControllerBase
     public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] Course updatedCourse)
     {
         var course = await _context.Courses.FindAsync(id);
-        if (course == null)
-            return NotFound(new { Success = false, Message = "Course not found" });
+        if (course == null) return NotFound();
 
         if (!string.IsNullOrEmpty(updatedCourse.Title)) course.Title = updatedCourse.Title;
         if (!string.IsNullOrEmpty(updatedCourse.Description)) course.Description = updatedCourse.Description;
@@ -174,8 +159,7 @@ public class AdminCourseController : ControllerBase
     public async Task<IActionResult> DeleteCourse(Guid id)
     {
         var course = await _context.Courses.FindAsync(id);
-        if (course == null)
-            return NotFound(new { Success = false, Message = "Course not found" });
+        if (course == null) return NotFound();
 
         _context.Courses.Remove(course);
         await _context.SaveChangesAsync();

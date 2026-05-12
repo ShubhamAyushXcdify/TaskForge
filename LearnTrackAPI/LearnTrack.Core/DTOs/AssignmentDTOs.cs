@@ -9,7 +9,6 @@ public class CreateAssignmentDto
 
 public class UpdateAssignmentDto
 {
-    // These are optional (nullable)
     public int? ProgressPercentage { get; set; }
     public string? Status { get; set; }
     public DateTime? LastAccessedAt { get; set; }
