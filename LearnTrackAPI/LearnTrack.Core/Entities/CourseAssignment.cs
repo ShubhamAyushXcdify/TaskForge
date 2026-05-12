@@ -26,8 +26,20 @@ public class CourseAssignment
     [Column("completiondate")]
     public DateTime? CompletionDate { get; set; }
 
+    // ✅ These must exist for the Controller to compile
+    [Column("duedate")]
+    public DateTime? DueDate { get; set; }
+
+    [Column("lastaccessedat")]
+    public DateTime? LastAccessedAt { get; set; }
+
+    [Column("updatedat")]
+    public DateTime? UpdatedAt { get; set; }
+
     [Column("createdat")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Navigation Properties
     public virtual Course? Course { get; set; }
+    public virtual Employee? Employee { get; set; }
 }
