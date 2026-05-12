@@ -20,34 +20,40 @@ public class AdminCourseController : ControllerBase
         _context = context;
     }
 
+    // GET: api/admin/courses
     [HttpGet]
     public async Task<IActionResult> GetAllCourses()
     {
         var courses = await _context.Courses
+            .Include(c => c.CourseCategory)
+            .Include(c => c.CourseProvider)
+            .Include(c => c.Assignments)
             .Select(course => new
             {
                 course.Id,
                 course.Title,
                 Description = course.Description ?? "",
-                Category = new { 
-                    Id = course.CourseCategoryId, 
-                    Name = course.CourseCategory != null ? course.CourseCategory.Name : "N/A" 
+                Category = new
+                {
+                    Id   = course.CourseCategoryId,
+                    Name = course.CourseCategory != null ? course.CourseCategory.Name : "N/A"
                 },
-                Provider = new { 
-                    Id = course.CourseProviderId, 
-                    Name = course.CourseProvider != null ? course.CourseProvider.Name : "N/A" 
+                Provider = new
+                {
+                    Id   = course.CourseProviderId,
+                    Name = course.CourseProvider != null ? course.CourseProvider.Name : "N/A"
                 },
                 course.DurationHours,
                 course.IsActive,
                 course.CreatedAt,
-                AssignedCount = course.Assignments.Count(),
-                CompletedCount = course.Assignments.Count(a => a.Status == "Completed"),
+                AssignedCount   = course.Assignments.Count(),
+                CompletedCount  = course.Assignments.Count(a => a.Status == "Completed"),
                 InProgressCount = course.Assignments.Count(a => a.Status == "InProgress"),
-                PendingCount = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
+                PendingCount    = course.Assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
             })
             .ToListAsync();
 
-        var finalResult = courses.Select(c => new
+        var result = courses.Select(c => new
         {
             c.Id,
             c.Title,
@@ -59,19 +65,20 @@ public class AdminCourseController : ControllerBase
             c.CreatedAt,
             Stats = new
             {
-                Assigned = c.AssignedCount,
-                Completed = c.CompletedCount,
-                InProgress = c.InProgressCount,
-                Pending = c.PendingCount,
-                CompletionRate = c.AssignedCount > 0 
-                    ? Math.Round((double)c.CompletedCount / c.AssignedCount * 100, 2) 
+                Assigned       = c.AssignedCount,
+                Completed      = c.CompletedCount,
+                InProgress     = c.InProgressCount,
+                Pending        = c.PendingCount,
+                CompletionRate = c.AssignedCount > 0
+                    ? Math.Round((double)c.CompletedCount / c.AssignedCount * 100, 2)
                     : 0
             }
         }).ToList();
 
-        return Ok(new { Success = true, Data = finalResult });
+        return Ok(new { Success = true, Data = result });
     }
 
+    // GET: api/admin/courses/{id}
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCourseById(Guid id)
     {
@@ -83,86 +90,155 @@ public class AdminCourseController : ControllerBase
         if (course == null)
             return NotFound(new { Success = false, Message = "Course not found" });
 
-        var assignments = await (from a in _context.CourseAssignments
-                                join emp in _context.Employees on a.EmployeeId equals emp.Id
-                                where a.CourseId == id
-                                select new
-                                {
-                                    AssignmentId = a.Id,
-                                    EmployeeName = $"{emp.FirstName} {emp.LastName}",
-                                    emp.EmployeeCode,
-                                    a.Status,
-                                    a.ProgressPercentage,
-                                    a.StartDate,
-                                    a.CompletionDate
-                                }).ToListAsync();
-
-        return Ok(new { Success = true, Data = new
-        {
-            course.Id,
-            course.Title,
-            course.Description,
-            Category = new { Id = course.CourseCategoryId, Name = course.CourseCategory?.Name ?? "N/A" },
-            Provider = new { Id = course.CourseProviderId, Name = course.CourseProvider?.Name ?? "N/A" },
-            course.DurationHours,
-            course.IsActive,
-            course.CreatedAt,
-            Stats = new
+        var assignments = await (
+            from a in _context.CourseAssignments
+            join emp in _context.Employees on a.EmployeeId equals emp.Id
+            where a.CourseId == id
+            select new
             {
-                Assigned = assignments.Count,
-                Completed = assignments.Count(a => a.Status == "Completed"),
-                InProgress = assignments.Count(a => a.Status == "InProgress"),
-                Pending = assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
-            },
-            Assignments = assignments
-        }});
+                AssignmentId       = a.Id,
+                EmployeeId         = emp.Id,
+                EmployeeName       = emp.FirstName + " " + emp.LastName,
+                emp.EmployeeCode,
+                a.Status,
+                a.ProgressPercentage,
+                a.DueDate,
+                StartedAt          = a.StartDate,
+                CompletedAt        = a.CompletionDate,
+                a.LastAccessedAt
+            }
+        ).ToListAsync();
+
+        return Ok(new
+        {
+            Success = true,
+            Data = new
+            {
+                course.Id,
+                course.Title,
+                course.Description,
+                Category    = new { Id = course.CourseCategoryId, Name = course.CourseCategory?.Name ?? "N/A" },
+                Provider    = new { Id = course.CourseProviderId, Name = course.CourseProvider?.Name  ?? "N/A" },
+                course.DurationHours,
+                course.IsActive,
+                course.CreatedAt,
+                Stats = new
+                {
+                    Assigned   = assignments.Count,
+                    Completed  = assignments.Count(a => a.Status == "Completed"),
+                    InProgress = assignments.Count(a => a.Status == "InProgress"),
+                    Pending    = assignments.Count(a => a.Status == "Pending" || a.Status == "Assigned")
+                },
+                Assignments = assignments
+            }
+        });
     }
 
+    // POST: api/admin/courses
+    // Body: { title, description, categoryId, providerId, durationHours, isActive }
     [HttpPost]
-    public async Task<IActionResult> CreateCourse([FromBody] Course course)
+    public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto dto)
     {
-        if (course == null || string.IsNullOrEmpty(course.Title))
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Title))
             return BadRequest(new { Success = false, Message = "Title is required" });
 
-        course.Id = Guid.NewGuid();
-        course.CreatedAt = DateTime.UtcNow;
-        course.IsActive = true;
+        // Validate FK: category must exist
+        if (!await _context.CourseCategories.AnyAsync(c => c.Id == dto.CategoryId))
+            return BadRequest(new { Success = false, Message = "Invalid CategoryId — category not found" });
+
+        // Validate FK: provider must exist
+        if (!await _context.CourseProviders.AnyAsync(p => p.Id == dto.ProviderId))
+            return BadRequest(new { Success = false, Message = "Invalid ProviderId — provider not found" });
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId != null) course.CreatedBy = Guid.Parse(userId);
+
+        var course = new Course
+        {
+            Id               = Guid.NewGuid(),
+            Title            = dto.Title,
+            Description      = dto.Description,
+            CourseCategoryId = dto.CategoryId,
+            CourseProviderId = dto.ProviderId,
+            DurationHours    = dto.DurationHours,
+            IsActive         = dto.IsActive,
+            CreatedAt        = DateTime.UtcNow,
+            CreatedBy        = userId != null ? Guid.Parse(userId) : Guid.Empty
+        };
 
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, 
-            new { Success = true, Message = "Course created successfully", Id = course.Id });
+        return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, new
+        {
+            Success   = true,
+            Id        = course.Id,
+            Title     = course.Title,
+            CreatedAt = course.CreatedAt
+        });
     }
 
+    // PATCH: api/admin/courses/{id}
+    // Body: any subset of { title, description, categoryId, providerId, durationHours, isActive }
     [HttpPatch("{id}")]
-    public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] Course updatedCourse)
+    public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto dto)
     {
+        if (dto == null)
+            return BadRequest(new { Success = false, Message = "Request body is required" });
+
         var course = await _context.Courses.FindAsync(id);
-        if (course == null) return NotFound();
+        if (course == null)
+            return NotFound(new { Success = false, Message = "Course not found" });
 
-        if (!string.IsNullOrEmpty(updatedCourse.Title)) course.Title = updatedCourse.Title;
-        if (!string.IsNullOrEmpty(updatedCourse.Description)) course.Description = updatedCourse.Description;
-        if (updatedCourse.DurationHours > 0) course.DurationHours = updatedCourse.DurationHours;
-        if (updatedCourse.CourseCategoryId != Guid.Empty) course.CourseCategoryId = updatedCourse.CourseCategoryId;
-        if (updatedCourse.CourseProviderId != Guid.Empty) course.CourseProviderId = updatedCourse.CourseProviderId;
-        course.IsActive = updatedCourse.IsActive;
+        if (!string.IsNullOrWhiteSpace(dto.Title))
+            course.Title = dto.Title;
 
-        await _context.SaveChangesAsync();
-        return Ok(new { Success = true, Message = "Course updated successfully", Id = course.Id });
+        if (dto.Description != null)
+            course.Description = dto.Description;
+
+        if (dto.CategoryId.HasValue)
+        {
+            if (!await _context.CourseCategories.AnyAsync(c => c.Id == dto.CategoryId.Value))
+                return BadRequest(new { Success = false, Message = "Invalid CategoryId — category not found" });
+            course.CourseCategoryId = dto.CategoryId.Value;
+        }
+
+        if (dto.ProviderId.HasValue)
+        {
+            if (!await _context.CourseProviders.AnyAsync(p => p.Id == dto.ProviderId.Value))
+                return BadRequest(new { Success = false, Message = "Invalid ProviderId — provider not found" });
+            course.CourseProviderId = dto.ProviderId.Value;
+        }
+
+        if (dto.DurationHours.HasValue)
+            course.DurationHours = dto.DurationHours.Value;
+
+        if (dto.IsActive.HasValue)
+            course.IsActive = dto.IsActive.Value;
+
+        var updatedAt = DateTime.UtcNow;
+await _context.SaveChangesAsync();
+
+return Ok(new
+{
+    Success   = true,
+    Id        = course.Id,
+    Title     = course.Title,
+    IsActive  = course.IsActive,
+    UpdatedAt = updatedAt
+});
     }
 
+    // DELETE: api/admin/courses/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCourse(Guid id)
     {
         var course = await _context.Courses.FindAsync(id);
-        if (course == null) return NotFound();
+        if (course == null)
+            return NotFound(new { Success = false, Message = "Course not found" });
 
         _context.Courses.Remove(course);
         await _context.SaveChangesAsync();
+
         return Ok(new { Success = true, Message = "Course deleted successfully" });
     }
 }

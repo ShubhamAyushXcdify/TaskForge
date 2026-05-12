@@ -15,6 +15,7 @@ public class StatusUpdateDto
 {
     public bool IsActive { get; set; }
     public string? EmploymentStatus { get; set; }
+    public string? Reason { get; set; }
 }
 
 public class UpdateEmployeeDto
@@ -22,6 +23,8 @@ public class UpdateEmployeeDto
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? Email { get; set; }
+    public string? Password { get; set; }
+    public Guid? ManagerId { get; set; }
     public bool? IsActive { get; set; }
 }
 

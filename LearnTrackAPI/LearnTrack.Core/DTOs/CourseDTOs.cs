@@ -109,4 +109,26 @@ namespace LearnTrack.Core.DTOs
         public string Message { get; set; } = string.Empty;
         public CourseDetailDto? Data { get; set; }
     }
+
+    // Add these to your existing CourseDTO.cs
+
+public class CreateCourseDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public Guid CategoryId { get; set; }
+    public Guid ProviderId { get; set; }
+    public decimal DurationHours { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class UpdateCourseDto
+{
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public Guid? CategoryId { get; set; }
+    public Guid? ProviderId { get; set; }
+    public decimal? DurationHours { get; set; }
+    public bool? IsActive { get; set; }
+}
 }
