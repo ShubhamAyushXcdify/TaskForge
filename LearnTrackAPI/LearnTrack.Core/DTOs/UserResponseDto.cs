@@ -14,16 +14,15 @@ namespace LearnTrack.Core.DTOs
         public bool IsEmailVerified { get; set; }
     }
 
-    public class CreateUserDto
-    {
-        public string Email { get; set; } = string.Empty;
-        public string PasswordHash { get; set; } = string.Empty;
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        public string? EmployeeCode { get; set; }
-        public Guid RoleId { get; set; }
-    }
-
+   public class CreateUserDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty; // ✅ renamed from PasswordHash
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? EmployeeCode { get; set; }
+    public Guid RoleId { get; set; }
+}
     public class UpdateUserDto
     {
         public string? Email { get; set; }
