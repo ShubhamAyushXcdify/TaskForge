@@ -6,12 +6,17 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using LearnTrack.Infrastructure.Services;
 using System.Security.Claims;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ 1. Controllers & JSON Formatting
+// ✅ 1. Controllers & JSON Formatting — camelCase for frontend compatibility
 builder.Services.AddControllers()
-    .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 
 builder.Services.AddScoped<EmailService>();
 
@@ -56,9 +61,6 @@ builder.Services.AddAuthentication(options => {
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ClockSkew = TimeSpan.Zero,
-        
-        // ✅ PERMANENT FIX: This ensures .NET correctly reads the role from the token
-        // whether it's stored as ClaimTypes.Role or just "role"
         RoleClaimType = ClaimTypes.Role,
         NameClaimType = ClaimTypes.NameIdentifier
     };
@@ -75,10 +77,10 @@ if (app.Environment.IsDevelopment()) {
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowFrontend"); 
+app.UseCors("AllowFrontend");
 
-app.UseAuthentication(); // Must come before Authorization
-app.UseAuthorization();  
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 app.Run();

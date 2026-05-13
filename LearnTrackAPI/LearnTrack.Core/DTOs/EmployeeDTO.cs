@@ -11,13 +11,6 @@ public class CreateEmployeeDto
     public string? Password { get; set; }
 }
 
-public class StatusUpdateDto
-{
-    public bool IsActive { get; set; }
-    public string? EmploymentStatus { get; set; }
-    public string? Reason { get; set; }
-}
-
 public class UpdateEmployeeDto
 {
     public string? FirstName { get; set; }
@@ -26,6 +19,13 @@ public class UpdateEmployeeDto
     public string? Password { get; set; }
     public Guid? ManagerId { get; set; }
     public bool? IsActive { get; set; }
+}
+
+public class StatusUpdateDto
+{
+    public bool IsActive { get; set; }
+    public string? EmploymentStatus { get; set; }
+    public string? Reason { get; set; }
 }
 
 public class EmployeeResponseDto
