@@ -131,4 +131,22 @@ public class UpdateCourseDto
     public decimal? DurationHours { get; set; }
     public bool? IsActive { get; set; }
 }
+
+public class CreateCourseCategoryDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+}
+
+public class UpdateCourseCategoryDto
+{
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+}
+
+public class UpdateCourseProviderDto
+{
+    public string? Name { get; set; }
+    public string? Website { get; set; }
+}
 }

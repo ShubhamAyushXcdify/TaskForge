@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Document> Documents { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Todo> Todos { get; set; } = null!;
+    public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
