@@ -87,7 +87,6 @@ public class EmployeeController : ControllerBase
 if (dto.FirstName != null) user.FirstName = dto.FirstName;
 if (dto.LastName != null) user.LastName = dto.LastName;
 if (dto.Email != null) user.Email = dto.Email;
-if (dto.IsActive.HasValue) user.IsActive = dto.IsActive.Value;
 
         await _context.SaveChangesAsync();
 

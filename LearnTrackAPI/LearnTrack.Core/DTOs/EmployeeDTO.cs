@@ -17,8 +17,8 @@ public class UpdateEmployeeDto
     public string? LastName { get; set; }
     public string? Email { get; set; }
     public string? Password { get; set; }
-    public Guid? ManagerId { get; set; }
-    public bool? IsActive { get; set; }
+    public Guid? EmployeeId { get; set; }
+    public Guid? RoleId { get; set; }
 }
 
 public class StatusUpdateDto

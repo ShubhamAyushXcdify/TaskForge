@@ -224,68 +224,57 @@ public class AdminEmployeeController : ControllerBase
     }
 
     // PATCH: api/admin/employees/{id}
-    // Body: any subset of { firstName, lastName, email, password, managerId, isActive }
+    // Body: any subset of { firstName, lastName, email, password, empID,role, }
     [HttpPatch("{id}")]
-    public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] UpdateEmployeeDto dto)
+public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] UpdateEmployeeDto dto)
+{
+    if (dto == null)
+        return BadRequest(new { Success = false, Message = "Request body is required" });
+
+    var employee = await _context.Employees
+        .Include(e => e.User)
+        .FirstOrDefaultAsync(e => e.Id == id);
+
+    if (employee == null)
+        return NotFound(new { Success = false, Message = "Employee not found" });
+
+    if (!string.IsNullOrWhiteSpace(dto.FirstName))
     {
-        if (dto == null)
-            return BadRequest(new { Success = false, Message = "Request body is required" });
-
-        var employee = await _context.Employees
-            .Include(e => e.User)
-            .FirstOrDefaultAsync(e => e.Id == id);
-
-        if (employee == null)
-            return NotFound(new { Success = false, Message = "Employee not found" });
-
-        // Update employee fields
-        if (!string.IsNullOrWhiteSpace(dto.FirstName))
-        {
-            employee.FirstName = dto.FirstName;
-            if (employee.User != null) employee.User.FirstName = dto.FirstName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(dto.LastName))
-        {
-            employee.LastName = dto.LastName;
-            if (employee.User != null) employee.User.LastName = dto.LastName;
-        }
-
-        if (dto.ManagerId.HasValue)
-            employee.ManagerId = dto.ManagerId;
-
-        if (dto.IsActive.HasValue)
-        {
-            employee.IsActive = dto.IsActive.Value;
-            if (employee.User != null) employee.User.IsActive = dto.IsActive.Value;
-        }
-
-        // Update email on User
-        if (!string.IsNullOrWhiteSpace(dto.Email) && employee.User != null)
-        {
-            if (await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != employee.UserId))
-                return BadRequest(new { Success = false, Message = "Email already in use" });
-            employee.User.Email = dto.Email;
-        }
-
-        // Update password on User
-        if (!string.IsNullOrWhiteSpace(dto.Password) && employee.User != null)
-            employee.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
-
-        employee.UpdatedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(new
-        {
-            Success   = true,
-            Id        = employee.Id,
-            FirstName = employee.FirstName,
-            LastName  = employee.LastName,
-            UpdatedAt = employee.UpdatedAt
-        });
+        employee.FirstName = dto.FirstName;
+        if (employee.User != null) employee.User.FirstName = dto.FirstName;
     }
 
+    if (!string.IsNullOrWhiteSpace(dto.LastName))
+    {
+        employee.LastName = dto.LastName;
+        if (employee.User != null) employee.User.LastName = dto.LastName;
+    }
+
+    if (!string.IsNullOrWhiteSpace(dto.Email) && employee.User != null)
+    {
+        if (await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != employee.UserId))
+            return BadRequest(new { Success = false, Message = "Email already in use" });
+        employee.User.Email = dto.Email;
+    }
+
+    if (dto.RoleId.HasValue && employee.User != null)
+        employee.User.RoleId = dto.RoleId.Value;
+
+    if (!string.IsNullOrWhiteSpace(dto.Password) && employee.User != null)
+        employee.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+
+    employee.UpdatedAt = DateTime.UtcNow;
+    await _context.SaveChangesAsync();
+
+    return Ok(new
+    {
+        Success   = true,
+        Id        = employee.Id,
+        FirstName = employee.FirstName,
+        LastName  = employee.LastName,
+        UpdatedAt = employee.UpdatedAt
+    });
+}
     // PATCH: api/admin/employees/{id}/status
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] StatusUpdateDto dto)
