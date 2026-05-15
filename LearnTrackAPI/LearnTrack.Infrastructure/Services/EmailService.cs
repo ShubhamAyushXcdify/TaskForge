@@ -15,27 +15,27 @@ public class EmailService
 
     public async Task SendEmailAsync(string to, string subject, string body)
     {
-        var smtpServer = _config["EmailSettings:SmtpServer"];
-        var port = int.Parse(_config["EmailSettings:Port"]!);
-        var senderEmail = _config["EmailSettings:SenderEmail"];
-        var password = _config["EmailSettings:Password"];
+        var smtpServer  = _config["EmailSettings:SmtpServer"]!;
+        var port        = int.Parse(_config["EmailSettings:Port"]!);
+        var senderEmail = _config["EmailSettings:SenderEmail"]!;
+        var password    = _config["EmailSettings:Password"]!;
 
-        var client = new SmtpClient(smtpServer, port)
+        using var client = new SmtpClient(smtpServer, port)
         {
             Credentials = new NetworkCredential(senderEmail, password),
-            EnableSsl = true
+            EnableSsl   = true
         };
 
-        var mail = new MailMessage
+        var mailMessage = new MailMessage
         {
-            From = new MailAddress(senderEmail!),
-            Subject = subject,
-            Body = body,
+            From       = new MailAddress(senderEmail),
+            Subject    = subject,
+            Body       = body,
             IsBodyHtml = true
         };
 
-        mail.To.Add(to);
+        mailMessage.To.Add(to);
 
-        await client.SendMailAsync(mail);
+        await client.SendMailAsync(mailMessage);
     }
 }

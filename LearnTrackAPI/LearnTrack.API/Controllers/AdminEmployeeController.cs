@@ -112,16 +112,16 @@ public class AdminEmployeeController : ControllerBase
             .Where(a => a.EmployeeId == id)
             .Select(a => new
             {
-                AssignmentId       = a.Id,
-                CourseId           = a.CourseId,
-                CourseTitle        = a.Course != null ? a.Course.Title : "N/A",
-                Category           = a.Course != null && a.Course.CourseCategory != null ? a.Course.CourseCategory.Name : "N/A",
-                DurationHours      = a.Course != null ? a.Course.DurationHours : 0,
+                AssignmentId   = a.Id,
+                CourseId       = a.CourseId,
+                CourseTitle    = a.Course != null ? a.Course.Title : "N/A",
+                Category       = a.Course != null && a.Course.CourseCategory != null ? a.Course.CourseCategory.Name : "N/A",
+                DurationHours  = a.Course != null ? a.Course.DurationHours : 0,
                 a.Status,
                 a.ProgressPercentage,
                 a.DueDate,
-                StartedAt          = a.StartDate,
-                CompletedAt        = a.CompletionDate,
+                StartedAt      = a.StartDate,
+                CompletedAt    = a.CompletionDate,
                 a.LastAccessedAt
             })
             .ToListAsync();
@@ -173,7 +173,6 @@ public class AdminEmployeeController : ControllerBase
         if (await _context.Employees.AnyAsync(e => e.EmployeeCode == dto.EmployeeCode))
             return BadRequest(new { Success = false, Message = "Employee code already exists" });
 
-        // Generate invitation token valid for 7 days
         var invitationToken = Guid.NewGuid();
         var tokenExpiry     = DateTime.UtcNow.AddDays(7);
 
@@ -213,68 +212,83 @@ public class AdminEmployeeController : ControllerBase
 
         return CreatedAtAction(nameof(GetEmployeeById), new { id = employee.Id }, new
         {
-            Success          = true,
-            Id               = employee.Id,
-            EmployeeCode     = employee.EmployeeCode,
-            Email            = user.Email,
-            InvitationToken  = invitationToken,
-            TokenExpiry      = tokenExpiry,
-            CreatedAt        = employee.CreatedAt
+            Success         = true,
+            Id              = employee.Id,
+            EmployeeCode    = employee.EmployeeCode,
+            Email           = user.Email,
+            InvitationToken = invitationToken,
+            TokenExpiry     = tokenExpiry,
+            CreatedAt       = employee.CreatedAt
         });
     }
 
     // PATCH: api/admin/employees/{id}
-    // Body: any subset of { firstName, lastName, email, password, empID,role, }
     [HttpPatch("{id}")]
-public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] UpdateEmployeeDto dto)
-{
-    if (dto == null)
-        return BadRequest(new { Success = false, Message = "Request body is required" });
-
-    var employee = await _context.Employees
-        .Include(e => e.User)
-        .FirstOrDefaultAsync(e => e.Id == id);
-
-    if (employee == null)
-        return NotFound(new { Success = false, Message = "Employee not found" });
-
-    if (!string.IsNullOrWhiteSpace(dto.FirstName))
+    public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] UpdateEmployeeDto dto)
     {
-        employee.FirstName = dto.FirstName;
-        if (employee.User != null) employee.User.FirstName = dto.FirstName;
+        if (dto == null)
+            return BadRequest(new { Success = false, Message = "Request body is required" });
+
+        var employee = await _context.Employees
+            .Include(e => e.User)
+            .FirstOrDefaultAsync(e => e.Id == id);
+
+        if (employee == null)
+            return NotFound(new { Success = false, Message = "Employee not found" });
+
+        if (!string.IsNullOrWhiteSpace(dto.FirstName))
+        {
+            employee.FirstName = dto.FirstName;
+            if (employee.User != null)
+            {
+                employee.User.FirstName = dto.FirstName;
+                _context.Entry(employee.User).Property(u => u.FirstName).IsModified = true;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.LastName))
+        {
+            employee.LastName = dto.LastName;
+            if (employee.User != null)
+            {
+                employee.User.LastName = dto.LastName;
+                _context.Entry(employee.User).Property(u => u.LastName).IsModified = true;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Email) && employee.User != null)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != employee.UserId))
+                return BadRequest(new { Success = false, Message = "Email already in use" });
+            employee.User.Email = dto.Email;
+            _context.Entry(employee.User).Property(u => u.Email).IsModified = true;
+        }
+
+        if (dto.RoleId.HasValue && employee.User != null)
+        {
+            employee.User.RoleId = dto.RoleId.Value;
+            _context.Entry(employee.User).Property(u => u.RoleId).IsModified = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Password) && employee.User != null)
+        {
+            employee.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            _context.Entry(employee.User).Property(u => u.PasswordHash).IsModified = true;
+        }
+
+        employee.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            Success   = true,
+            Id        = employee.Id,
+            FirstName = employee.FirstName,
+            LastName  = employee.LastName,
+            UpdatedAt = employee.UpdatedAt
+        });
     }
 
-    if (!string.IsNullOrWhiteSpace(dto.LastName))
-    {
-        employee.LastName = dto.LastName;
-        if (employee.User != null) employee.User.LastName = dto.LastName;
-    }
-
-    if (!string.IsNullOrWhiteSpace(dto.Email) && employee.User != null)
-    {
-        if (await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != employee.UserId))
-            return BadRequest(new { Success = false, Message = "Email already in use" });
-        employee.User.Email = dto.Email;
-    }
-
-    if (dto.RoleId.HasValue && employee.User != null)
-        employee.User.RoleId = dto.RoleId.Value;
-
-    if (!string.IsNullOrWhiteSpace(dto.Password) && employee.User != null)
-        employee.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
-
-    employee.UpdatedAt = DateTime.UtcNow;
-    await _context.SaveChangesAsync();
-
-    return Ok(new
-    {
-        Success   = true,
-        Id        = employee.Id,
-        FirstName = employee.FirstName,
-        LastName  = employee.LastName,
-        UpdatedAt = employee.UpdatedAt
-    });
-}
     // PATCH: api/admin/employees/{id}/status
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] StatusUpdateDto dto)
@@ -286,12 +300,16 @@ public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] UpdateEmploy
         if (employee == null)
             return NotFound(new { Success = false, Message = "Employee not found" });
 
-        employee.IsActive        = dto.IsActive;
+        employee.IsActive         = dto.IsActive;
         employee.EmploymentStatus = !string.IsNullOrWhiteSpace(dto.EmploymentStatus)
             ? dto.EmploymentStatus
             : (dto.IsActive ? "Active" : "Inactive");
 
-        if (employee.User != null) employee.User.IsActive = dto.IsActive;
+        if (employee.User != null)
+        {
+            employee.User.IsActive = dto.IsActive;
+            _context.Entry(employee.User).Property(u => u.IsActive).IsModified = true;
+        }
 
         employee.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
