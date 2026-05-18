@@ -32,6 +32,7 @@ public class AdminCourseController : ControllerBase
             {
                 course.Id,
                 course.Title,
+                course.CourseUrl,
                 Description = course.Description ?? "",
                 Category = new
                 {
@@ -57,6 +58,7 @@ public class AdminCourseController : ControllerBase
         {
             c.Id,
             c.Title,
+            c.CourseUrl,        // ← THIS WAS MISSING
             c.Description,
             c.Category,
             c.Provider,
@@ -116,6 +118,7 @@ public class AdminCourseController : ControllerBase
             {
                 course.Id,
                 course.Title,
+                course.CourseUrl,
                 course.Description,
                 Category    = new { Id = course.CourseCategoryId, Name = course.CourseCategory?.Name ?? "N/A" },
                 Provider    = new { Id = course.CourseProviderId, Name = course.CourseProvider?.Name  ?? "N/A" },
@@ -135,18 +138,15 @@ public class AdminCourseController : ControllerBase
     }
 
     // POST: api/admin/courses
-    // Body: { title, description, categoryId, providerId, durationHours, isActive }
     [HttpPost]
     public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto dto)
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.Title))
             return BadRequest(new { Success = false, Message = "Title is required" });
 
-        // Validate FK: category must exist
         if (!await _context.CourseCategories.AnyAsync(c => c.Id == dto.CategoryId))
             return BadRequest(new { Success = false, Message = "Invalid CategoryId — category not found" });
 
-        // Validate FK: provider must exist
         if (!await _context.CourseProviders.AnyAsync(p => p.Id == dto.ProviderId))
             return BadRequest(new { Success = false, Message = "Invalid ProviderId — provider not found" });
 
@@ -157,6 +157,7 @@ public class AdminCourseController : ControllerBase
             Id               = Guid.NewGuid(),
             Title            = dto.Title,
             Description      = dto.Description,
+            CourseUrl        = dto.CourseUrl,
             CourseCategoryId = dto.CategoryId,
             CourseProviderId = dto.ProviderId,
             DurationHours    = dto.DurationHours,
@@ -173,12 +174,12 @@ public class AdminCourseController : ControllerBase
             Success   = true,
             Id        = course.Id,
             Title     = course.Title,
+            CourseUrl = course.CourseUrl,
             CreatedAt = course.CreatedAt
         });
     }
 
     // PATCH: api/admin/courses/{id}
-    // Body: any subset of { title, description, categoryId, providerId, durationHours, isActive }
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto dto)
     {
@@ -194,6 +195,9 @@ public class AdminCourseController : ControllerBase
 
         if (dto.Description != null)
             course.Description = dto.Description;
+
+        if (dto.CourseUrl != null)
+            course.CourseUrl = dto.CourseUrl;
 
         if (dto.CategoryId.HasValue)
         {
@@ -216,16 +220,18 @@ public class AdminCourseController : ControllerBase
             course.IsActive = dto.IsActive.Value;
 
         var updatedAt = DateTime.UtcNow;
-await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
-return Ok(new
-{
-    Success   = true,
-    Id        = course.Id,
-    Title     = course.Title,
-    IsActive  = course.IsActive,
-    UpdatedAt = updatedAt
-});
+        return Ok(new
+        {
+            Success       = true,
+            Id            = course.Id,
+            Title         = course.Title,
+            CourseUrl     = course.CourseUrl,
+            DurationHours = course.DurationHours,
+            IsActive      = course.IsActive,
+            UpdatedAt     = updatedAt
+        });
     }
 
     // DELETE: api/admin/courses/{id}

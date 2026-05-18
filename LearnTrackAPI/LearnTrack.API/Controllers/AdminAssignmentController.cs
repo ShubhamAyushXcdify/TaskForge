@@ -36,6 +36,8 @@ public class AdminAssignmentController : ControllerBase
             AssignmentId      = a.Id,
             CourseId          = a.CourseId,
             CourseTitle       = a.Course?.Title ?? "N/A",
+            CourseUrl         = a.Course?.CourseUrl,        
+            DurationHours     = a.Course?.DurationHours,
             Category          = a.Course?.CourseCategory?.Name ?? "N/A",
             ProviderName      = a.Course?.CourseProvider?.Name ?? "N/A",
             EmployeeId        = a.EmployeeId,
@@ -73,6 +75,8 @@ public class AdminAssignmentController : ControllerBase
             AssignmentId       = a.Id,
             CourseId           = a.CourseId,
             CourseTitle        = a.Course?.Title ?? "N/A",
+            CourseUrl         = a.Course?.CourseUrl,        // ← ADD
+            DurationHours     = a.Course?.DurationHours,
             Category           = a.Course?.CourseCategory?.Name ?? "N/A",
             ProviderName       = a.Course?.CourseProvider?.Name ?? "N/A",
             EmployeeId         = a.EmployeeId,

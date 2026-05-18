@@ -70,6 +70,8 @@ public class AssignmentController : ControllerBase
                     {
                         assignment.Id,
                         CourseTitle = course.Title,
+                        CourseUrl      = course.CourseUrl,     
+                        DurationHours  = course.DurationHours,
                         EmployeeName = $"{user.FirstName} {user.LastName}",
                         assignment.Status,
                         assignment.ProgressPercentage,

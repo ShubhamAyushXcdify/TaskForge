@@ -120,6 +120,7 @@ public class CreateCourseDto
     public Guid ProviderId { get; set; }
     public decimal DurationHours { get; set; }
     public bool IsActive { get; set; } = true;
+    public string? CourseUrl { get; set; }
 }
 
 public class UpdateCourseDto
@@ -130,6 +131,7 @@ public class UpdateCourseDto
     public Guid? ProviderId { get; set; }
     public decimal? DurationHours { get; set; }
     public bool? IsActive { get; set; }
+    public string? CourseUrl { get; set; }
 }
 
 public class CreateCourseCategoryDto

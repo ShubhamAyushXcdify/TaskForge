@@ -43,4 +43,7 @@ public class CourseAssignment
 
     [ForeignKey("EmployeeId")]
     public virtual Employee? Employee { get; set; }
+
+    [Column("certificateurl")]
+    public string? CertificateUrl { get; set; }
 }

@@ -13,6 +13,9 @@ public class Course
 
     [Column("description")]
     public string? Description { get; set; }
+   
+    [Column("courseurl")]
+    public string? CourseUrl { get; set; }
 
     [Column("durationhours")]
     public decimal DurationHours { get; set; }
@@ -39,4 +42,5 @@ public class Course
     public virtual CourseProvider? CourseProvider { get; set; }
     
     public virtual ICollection<CourseAssignment> Assignments { get; set; } = new List<CourseAssignment>();
+
 }
