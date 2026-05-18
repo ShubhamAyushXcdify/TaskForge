@@ -42,15 +42,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null;
           }
 
-          return {
-            id: data.user?.UserId,
-            name: `${data.user?.FirstName || ""} ${data.user?.LastName || ""}`,
-            email: data.user?.Email,
-            token: data.token,
-            role: data.user?.Role
-              ? data.user.Role.toLowerCase()
-              : "user",
-          };
+         return {
+  id: data.user?.userId,         
+  name: `${data.user?.firstName || ""} ${data.user?.lastName || ""}`,  
+  email: data.user?.email,         
+  token: data.token,
+  role: data.user?.role           
+    ? data.user.role.toLowerCase()
+    : "user",
+};
 
         } catch (error) {
           return null;

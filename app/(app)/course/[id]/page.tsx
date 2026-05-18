@@ -31,12 +31,12 @@ export default function CourseDetailPage() {
           headers["Authorization"] = `Bearer ${session.user.token}`;
         }
 
-        // ✅ Fixed URL
+        
         const courseRes = await fetch(`${backendUrl}/api/Course/${id}`, { headers });
         const courseJson = await courseRes.json();
 
-        if (courseJson?.Success) {
-          setCourse(courseJson.Data);
+        if (courseJson?.success) {
+          setCourse(courseJson.data);
         } else {
           setError(courseJson?.Message || "Failed to load course");
         }
@@ -44,22 +44,22 @@ export default function CourseDetailPage() {
         const myRes = await fetch(`${backendUrl}/api/Course/MyCourses`, { headers });
         const myJson = await myRes.json();
 
-        if (myJson?.Success && myJson.Data?.Assignments) {
-          const userAssignment = myJson.Data.Assignments.find(
-            (a: any) => a.CourseId === id
+        if (myJson?.success && myJson.data?.assignments) {
+          const userAssignment = myJson.data.assignments.find(
+            (a: any) => a.courseId === id
           );
           if (userAssignment) {
             setAssignment({
-              ProgressPercentage: userAssignment.ProgressPercentage || 0,
-              Status: userAssignment.Status,
-              CompletedAt: userAssignment.CompletedAt,
+              progressPercentage: userAssignment.progressPercentage || 0,
+              status: userAssignment.status,
+              completedAt: userAssignment.completedAt,
             });
           }
         }
       } catch (err) {
         console.error(err);
         setError("Something went wrong");
-        toast.error("Failed to load course details");  // ✅ Toast added
+        toast.error("Failed to load course details");  
       } finally {
         setLoading(false);
       }
@@ -69,23 +69,23 @@ export default function CourseDetailPage() {
   }, [id, session, backendUrl]);
 
   const handleGoToCourse = () => {
-    if (course?.ProviderWebsite) {
-      window.open(course.ProviderWebsite, "_blank", "noopener,noreferrer");
+    if (course?.providerWebsite) {
+      window.open(course.providerWebsite, "_blank", "noopener,noreferrer");
     } else {
-      toast.error("No external link available for this course.");  // ✅ Toast instead of alert
+      toast.error("No external link available for this course.");  
     }
   };
 
   const handleRequestCourse = () => {
     if (!session?.user?.token) {
-      toast.error("Please login to request this course");  // ✅ Toast instead of alert
+      toast.error("Please login to request this course");  
       return;
     }
 
     setRequesting(true);
     setTimeout(() => {
-      toast.success("Request Sent Successfully!", {         // ✅ Toast instead of alert
-        description: `Your request for "${course?.Title}" has been sent. Manager will review it soon.`,
+      toast.success("Request Sent Successfully!", {      
+        description: `Your request for "${course?.title}" has been sent. Manager will review it soon.`,
         duration: 6000,
       });
       setRequesting(false);
@@ -108,10 +108,10 @@ export default function CourseDetailPage() {
     );
   }
 
-  const bannerColor = categoryColors[course.CategoryName] || "from-slate-400 to-slate-600";
+  const bannerColor = categoryColors[course.categoryName] || "from-slate-400 to-slate-600";
   const isEnrolled = !!assignment;
-  const progress = assignment?.ProgressPercentage || 0;
-  const isCompleted = assignment?.Status === "Completed";
+  const progress = assignment?.progressPercentage || 0;
+  const isCompleted = assignment?.status === "Completed";
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -119,7 +119,7 @@ export default function CourseDetailPage() {
         <nav className="flex items-center gap-2 text-sm text-slate-400 mb-6">
           <Link href="/course" className="hover:text-teal-600">Courses</Link>
           <span>›</span>
-          <span className="text-slate-600 line-clamp-1">{course.Title}</span>
+          <span className="text-slate-600 line-clamp-1">{course.title}</span>
         </nav>
 
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
@@ -127,19 +127,19 @@ export default function CourseDetailPage() {
             <div className="absolute inset-0 bg-black/30" />
             <div className="absolute bottom-0 left-0 right-0 p-7">
               <span className="inline-block px-4 py-1 bg-white/90 text-xs font-medium rounded-full mb-3">
-                {course.CategoryName}
+                {course.categoryName}
               </span>
               <h1 className="text-3xl font-semibold text-white leading-tight">
-                {course.Title}
+                {course.title}
               </h1>
             </div>
           </div>
 
           <div className="p-7">
             <div className="flex flex-wrap gap-3 mb-7">
-              <MetaPill icon="🏢" label={course.ProviderName} />
-              <MetaPill icon="⏱" label={`${course.DurationHours} hours`} />
-              <MetaPill icon="👥" label={`${course.TotalAssignments} enrolled`} />
+              <MetaPill icon="🏢" label={course.providerName} />
+              <MetaPill icon="⏱" label={`${course.durationHours} hours`} />
+              <MetaPill icon="👥" label={`${course.totalAssignments} enrolled`} />
             </div>
 
             {isEnrolled && (
@@ -162,7 +162,7 @@ export default function CourseDetailPage() {
             <div className="mb-8">
               <h3 className="text-sm font-semibold text-slate-700 mb-3">ABOUT THIS COURSE</h3>
               <p className="text-slate-600 leading-relaxed">
-                {course.Description || "No description available."}
+                {course.description || "No description available."}
               </p>
             </div>
 

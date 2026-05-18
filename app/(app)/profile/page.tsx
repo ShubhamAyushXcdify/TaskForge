@@ -16,7 +16,7 @@ export default function ProfilePage() {
   const token = session?.user?.token;
   const user = session?.user;
 
-  const fullName = user?.name?.trim() || "User1";
+  const fullName = user?.name?.trim() || "User";
   const initials = fullName
     .split(" ")
     .map((n) => n[0])
@@ -45,8 +45,13 @@ export default function ProfilePage() {
         const coursesData = await coursesRes.json();
         const statsData = await statsRes.json();
 
-        if (coursesData?.Success) setMyCourses(coursesData.Data?.Assignments || []);
-        if (statsData?.Success) setStats(statsData.Data);
+       if (coursesData?.success) {
+  setMyCourses(coursesData.data?.assignments || []);
+}
+
+if (statsData?.success) {
+  setStats(statsData.data);
+}
       } catch (err) {
         console.error(err);
         toast.error("Failed to load profile data");
@@ -58,12 +63,12 @@ export default function ProfilePage() {
     fetchData();
   }, [token, backendUrl]);
 
-  const completedCourses = myCourses.filter((c) => c.Status === "Completed");
-  const inProgressCourses = myCourses.filter((c) => c.Status === "InProgress");
+  const completedCourses = myCourses.filter((c) => c.status === "Completed");
+  const inProgressCourses = myCourses.filter((c) => c.status === "InProgress");
 
   
   const handleSaveProfile = () => {
-    // TODO: Add actual API call here later
+    
     toast.success("Profile updated successfully!", {
       description: "Your changes have been saved.",
     });
@@ -108,15 +113,15 @@ export default function ProfilePage() {
             <div className="space-y-5">
               <div className="flex justify-between">
                 <span className="text-slate-600">Courses Completed</span>
-                <span className="font-semibold text-xl">{stats?.Completed || 0}</span>
+                <span className="font-semibold text-xl">{stats?.completed || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Hours Learned</span>
-                <span className="font-semibold text-xl">{stats?.TotalHoursSpent || 0}h</span>
+                <span className="font-semibold text-xl">{stats?.totalHoursSpent || 0}h</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Completion Rate</span>
-                <span className="font-semibold text-xl">{stats?.CompletionRate || 0}%</span>
+                <span className="font-semibold text-xl">{stats?.completionRate || 0}%</span>
               </div>
             </div>
           </div>
@@ -124,9 +129,9 @@ export default function ProfilePage() {
           {/* Skills */}
           <div className="bg-white rounded-3xl p-6 border border-teal-100 shadow-sm">
             <p className="uppercase text-xs font-bold tracking-widest text-teal-500 mb-4">Skills</p>
-            {Array.from(new Set(myCourses.map(c => c.CourseCategory))).slice(0, 5).map((cat, i) => {
-              const count = myCourses.filter(c => c.CourseCategory === cat).length;
-              const completed = myCourses.filter(c => c.CourseCategory === cat && c.Status === "Completed").length;
+            {Array.from(new Set(myCourses.map(c => c.courseCategory))).slice(0, 5).map((cat, i) => {
+              const count = myCourses.filter(c => c.courseCategory === cat).length;
+              const completed = myCourses.filter(c => c.courseCategory === cat && c.status === "Completed").length;
               const progress = count ? Math.round((completed / count) * 100) : 0;
 
               return (
@@ -157,14 +162,14 @@ export default function ProfilePage() {
 
             {completedCourses.length > 0 ? (
               completedCourses.map((course) => (
-                <div key={course.AssignmentId} className="flex gap-4 p-4 bg-teal-50 rounded-2xl mb-3 last:mb-0">
+                <div key={course.assignmentId} className="flex gap-4 p-4 bg-teal-50 rounded-2xl mb-3 last:mb-0">
                   <div className="w-11 h-11 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center text-2xl">🏆</div>
                   <div className="flex-1">
-                    <p className="font-medium text-slate-800">{course.CourseTitle}</p>
-                    <p className="text-xs text-slate-500">{course.ProviderName}</p>
+                    <p className="font-medium text-slate-800">{course.courseTitle}</p>
+                    <p className="text-xs text-slate-500">{course.providerName}</p>
                   </div>
                   <div className="text-xs text-slate-500 self-center">
-                    {course.CompletedAt && new Date(course.CompletedAt).toLocaleDateString()}
+                    {course.completedAt && new Date(course.completedAt).toLocaleDateString()}
                   </div>
                 </div>
               ))
@@ -182,12 +187,12 @@ export default function ProfilePage() {
                 <p className="text-amber-600 font-medium mb-3">In Progress ({inProgressCourses.length})</p>
                 <div className="space-y-3">
                   {inProgressCourses.map((c) => (
-                    <div key={c.AssignmentId} className="flex justify-between bg-amber-50 px-5 py-4 rounded-2xl">
+                    <div key={c.assignmentId} className="flex justify-between bg-amber-50 px-5 py-4 rounded-2xl">
                       <div>
-                        <p className="font-medium">{c.CourseTitle}</p>
-                        <p className="text-xs text-slate-500">{c.ProviderName}</p>
+                        <p className="font-medium">{c.courseTitle}</p>
+                        <p className="text-xs text-slate-500">{c.providerName}</p>
                       </div>
-                      <span className="text-amber-600 font-semibold">{c.ProgressPercentage}%</span>
+                      <span className="text-amber-600 font-semibold">{c.progressPercentage}%</span>
                     </div>
                   ))}
                 </div>
@@ -199,10 +204,10 @@ export default function ProfilePage() {
                 <p className="text-emerald-600 font-medium mb-3">Completed ({completedCourses.length})</p>
                 <div className="space-y-3">
                   {completedCourses.map((c) => (
-                    <div key={c.AssignmentId} className="flex justify-between bg-emerald-50 px-5 py-4 rounded-2xl">
+                    <div key={c.assignmentId} className="flex justify-between bg-emerald-50 px-5 py-4 rounded-2xl">
                       <div>
-                        <p className="font-medium">{c.CourseTitle}</p>
-                        <p className="text-xs text-slate-500">{c.ProviderName}</p>
+                        <p className="font-medium">{c.courseTitle}</p>
+                        <p className="text-xs text-slate-500">{c.providerName}</p>
                       </div>
                       <span className="text-emerald-600 font-bold">100%</span>
                     </div>
