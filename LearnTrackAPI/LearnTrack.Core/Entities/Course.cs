@@ -1,24 +1,46 @@
-﻿namespace LearnTrack.Core.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace LearnTrack.Core.Entities;
+
+[Table("courses")]
+public class Course
 {
-    public class Course
-    {
-        public Guid Id { get; set; }
+    [Column("id")]
+    public Guid Id { get; set; }
 
-        public Guid CourseProviderId { get; set; }
-        public Guid CourseCategoryId { get; set; }
+    [Column("title")]
+    public string Title { get; set; } = string.Empty;
 
-        public string Title { get; set; } = string.Empty;
-        public string? Description { get; set; }
+    [Column("description")]
+    public string? Description { get; set; }
+   
+    [Column("courseurl")]
+    public string? CourseUrl { get; set; }
 
-        public int DurationHours { get; set; }
-        public bool IsActive { get; set; }
+    [Column("durationhours")]
+    public decimal DurationHours { get; set; }
 
-        public Guid CreatedBy { get; set; }
+    [Column("coursecategoryid")]
+    public Guid CourseCategoryId { get; set; }
 
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
+    [Column("courseproviderid")]
+    public Guid CourseProviderId { get; set; }
 
-        public virtual CourseCategory? Category { get; set; }
-        public virtual CourseProvider? Provider { get; set; }
-    }
+    [Column("isactive")]
+    public bool IsActive { get; set; }
+
+    [Column("createdby")]
+    public Guid CreatedBy { get; set; }
+
+    [Column("createdat")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey("CourseCategoryId")]
+    public virtual CourseCategory? CourseCategory { get; set; }
+
+    [ForeignKey("CourseProviderId")]
+    public virtual CourseProvider? CourseProvider { get; set; }
+    
+    public virtual ICollection<CourseAssignment> Assignments { get; set; } = new List<CourseAssignment>();
+
 }

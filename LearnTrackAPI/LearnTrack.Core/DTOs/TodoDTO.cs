@@ -1,3 +1,5 @@
+namespace LearnTrack.Core.DTOs;
+
 public class TodoDto
 {
     public Guid Id { get; set; }

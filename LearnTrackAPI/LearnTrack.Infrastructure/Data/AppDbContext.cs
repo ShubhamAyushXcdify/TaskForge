@@ -16,29 +16,21 @@ public class AppDbContext : DbContext
     public DbSet<Course> Courses { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
-   public DbSet<Todo> Todos { get; set; } = null!;
+    public DbSet<Todo> Todos { get; set; } = null!;
+    public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // 🔥 FORCE LOWERCASE TABLE NAMES (IMPORTANT)
-        foreach (var entity in modelBuilder.Model.GetEntityTypes())
-        {
-            var tableName = entity.GetTableName();
+        // ❌ REMOVED: The global lowercase loop - it fights with [Column] attributes
+        // ❌ REMOVED: All explicit HasColumnName("id") calls - they cause double registration
 
-            if (!string.IsNullOrEmpty(tableName))
-            {
-                entity.SetTableName(tableName.ToLower());
-            }
-        }
-
-        // UUID default
+        // ✅ User setup only
         modelBuilder.Entity<User>()
             .Property(u => u.Id)
             .HasDefaultValueSql("gen_random_uuid()");
 
-        // Relationship
         modelBuilder.Entity<User>()
             .HasOne(u => u.Role)
             .WithMany()

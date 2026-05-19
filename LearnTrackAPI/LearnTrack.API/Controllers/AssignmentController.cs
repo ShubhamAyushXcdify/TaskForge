@@ -29,12 +29,12 @@ public class AssignmentController : ControllerBase
         if (!courseExists) 
             return BadRequest(new { Success = false, Message = "Invalid Course ID" });
 
-        var employeeExists = await _context.Employees.AnyAsync(e => e.Id == dto.EmployeeId);
+        var employeeExists = await _context.Employees.AnyAsync(e => e.Id == dto.EmployeeIds.FirstOrDefault());
         if (!employeeExists) 
             return BadRequest(new { Success = false, Message = "Invalid Employee ID" });
 
         var alreadyAssigned = await _context.CourseAssignments
-            .AnyAsync(a => a.CourseId == dto.CourseId && a.EmployeeId == dto.EmployeeId);
+            .AnyAsync(a => a.CourseId == dto.CourseId && a.EmployeeId == dto.EmployeeIds.FirstOrDefault());
 
         if (alreadyAssigned) 
             return BadRequest(new { Success = false, Message = "Course already assigned to this employee" });
@@ -43,7 +43,7 @@ public class AssignmentController : ControllerBase
         {
             Id = Guid.NewGuid(),
             CourseId = dto.CourseId,
-            EmployeeId = dto.EmployeeId,
+            EmployeeId = dto.EmployeeIds.FirstOrDefault(),
             Status = "Pending",
             ProgressPercentage = 0,
             CreatedAt = DateTime.UtcNow
@@ -70,6 +70,8 @@ public class AssignmentController : ControllerBase
                     {
                         assignment.Id,
                         CourseTitle = course.Title,
+                        CourseUrl      = course.CourseUrl,     
+                        DurationHours  = course.DurationHours,
                         EmployeeName = $"{user.FirstName} {user.LastName}",
                         assignment.Status,
                         assignment.ProgressPercentage,

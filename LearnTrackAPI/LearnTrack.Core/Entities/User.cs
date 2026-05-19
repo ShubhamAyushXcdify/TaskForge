@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization; // ✅ Added for security
 
 namespace LearnTrack.Core.Entities;
 
@@ -11,6 +12,7 @@ public class User
     [Column("email")]
     public string Email { get; set; } = string.Empty;
 
+    [JsonIgnore] // ✅ This prevents the password from ever being returned in an API
     [Column("passwordhash")]
     public string PasswordHash { get; set; } = string.Empty;
 

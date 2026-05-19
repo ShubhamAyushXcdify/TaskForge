@@ -97,42 +97,42 @@ export type CurrentlyLearningProps = {
 }
 
 export type CourseDetail = {
-  Id: string;
-  Title: string;
-  Description: string;
-  DurationHours: number;
-  IsActive: boolean;
-  CreatedAt: string;
-  CategoryName: string;
-  ProviderName: string;
-  ProviderWebsite: string | null;
-  TotalAssignments: number;
+  id: string;
+  title: string;
+  description: string;
+  durationHours: number;
+  isActive: boolean;
+  createdAt: string;
+  categoryName: string;
+  providerName: string;
+  providerWebsite: string | null;
+  totalAssignments: number;
 }
 
 export type UserAssignment = {
-  ProgressPercentage: number;
-  Status: string;
-  CompletedAt: string | null;
+  progressPercentage: number;
+  status: string;
+  completedAt: string | null;
 }
 
 export type MyCourse = {
-  AssignmentId: string;
-  CourseId: string;
-  CourseTitle: string;
-  CourseCategory: string;
-  ProviderName: string;
-  DurationHours: number;
-  Status: string;
-  ProgressPercentage: number;
-  CompletedAt: string | null;
+  assignmentId: string;
+  courseId: string;
+  courseTitle: string;
+  courseCategory: string;
+  providerName: string;
+  durationHours: number;
+  status: string;
+  progressPercentage: number;
+  completedAt: string | null;
 }
 
 export type DashboardStats= {
-  Assigned: number;
-  Completed: number;
-  InProgress: number;
-  NotStarted: number;
-  CompletionRate: number;
-  TotalHoursSpent: number;
-  AvgScore: number | null;
+  assigned: number;
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+  completionRate: number;
+  totalHoursSpent: number;
+  avgScore: number | null;
 }

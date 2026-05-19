@@ -26,8 +26,24 @@ public class CourseAssignment
     [Column("completiondate")]
     public DateTime? CompletionDate { get; set; }
 
+    [Column("duedate")]
+    public DateTime? DueDate { get; set; }
+
+    [Column("lastaccessedat")]
+    public DateTime? LastAccessedAt { get; set; }
+
+    [Column("updatedat")]
+    public DateTime? UpdatedAt { get; set; }
+
     [Column("createdat")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    [ForeignKey("CourseId")]
     public virtual Course? Course { get; set; }
+
+    [ForeignKey("EmployeeId")]
+    public virtual Employee? Employee { get; set; }
+
+    [Column("certificateurl")]
+    public string? CertificateUrl { get; set; }
 }

@@ -45,23 +45,28 @@ export default function CoursePage() {
 
       const [myData, allData] = await Promise.all([myRes.json(), allRes.json()]);
 
-      if (myData?.Success) {
-        setMyAssignments(
-          (myData.Data?.Assignments || []).map((a: any) => ({
-            assignmentId: a.AssignmentId,
-            courseId: a.CourseId,
-            courseTitle: a.CourseTitle,
-            courseCategory: a.CourseCategory,
-            providerName: a.ProviderName,
-            durationHours: a.DurationHours,
-            progressPercentage: a.ProgressPercentage || 0,
-            status: a.Status,
+     if (myData?.success) {
+  setMyAssignments(
+    (myData.data?.assignments || []).map((a: any) => ({
+            assignmentId: a.assignmentId,
+            courseId: a.courseId,
+            courseTitle: a.courseTitle,
+            courseCategory: a.courseCategory,
+            providerName: a.providerName,
+            durationHours: a.durationHours,
+            progressPercentage: a.progressPercentage || 0,
+            status:
+  a.Status ||
+  a.status ||
+  a.assignmentStatus ||
+  a.assignmentStatus ||
+  "notstarted",
           }))
         );
       }
 
-      if (allData?.Success) {
-        const shuffled = allData.Data.sort(() => Math.random() - 0.5);
+      if (allData?.success) {
+  const shuffled = allData.data.sort(() => Math.random() - 0.5);
         setAllCourses(shuffled || []);
       }
     } catch (err) {
@@ -75,24 +80,35 @@ export default function CoursePage() {
     fetchData();
   }, [fetchData]);
 
-  // 🆕 Normalize allCourses to match CourseCard structure
+
   const normalizedAllCourses = allCourses.map(course => ({
-    id: course.Id || course.id || course.CourseId,
-    courseId: course.Id || course.id || course.CourseId,
-    courseTitle: course.Title || course.courseTitle || 'Untitled Course',
-    courseCategory: course.Category || course.CategoryName || course.courseCategory || 'General',
-    providerName: course.ProviderName || course.providerName || '',
-    durationHours: course.DurationHours || course.durationHours || 0,
-    progressPercentage: 0,
-    status: 'NotStarted'
-  }));
+  id: course.id,
+  courseId: course.id,
+  courseTitle: course.title,
+  courseCategory: course.category,
+  providerName: course.providerName,
+  durationHours: course.durationHours,
+  progressPercentage: 0,
+  status: "NotStarted"
+}));
+  const normalizeStatus = (status: string = "") =>
+  status.replace(/\s/g, "").toLowerCase();
 
   // Filter logic
-  const currentlyLearning = myAssignments.filter(
-    (c) => c.status === "InProgress"||c.status === "NotStarted");
 
-  const trending = normalizedAllCourses.slice(0, 6);
-  const recommended = normalizedAllCourses.slice(6, 12);
+ const currentlyLearning = myAssignments.filter((c) => {
+  const status = normalizeStatus(c.status);
+
+  return [
+    "inprogress",
+    "notstarted",
+    "pending",
+    "overdue",
+    "assigned",
+  ].includes(status);
+});
+  const trending = normalizedAllCourses.slice(0,5);
+  const recommended = normalizedAllCourses.slice(2,7);
 
 
   const filterCourses = (courses: any[]) => {

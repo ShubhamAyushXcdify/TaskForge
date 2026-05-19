@@ -54,7 +54,7 @@ namespace LearnTrack.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("documents");
+                    b.ToTable("Documents");
                 });
 
             modelBuilder.Entity("LearnTrack.Core.Entities.AuditLog", b =>
@@ -96,37 +96,51 @@ namespace LearnTrack.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<Guid>("CourseCategoryId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("coursecategoryid");
 
                     b.Property<Guid>("CourseProviderId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("courseproviderid");
+
+                    b.Property<string>("CourseUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("courseurl");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("createdby");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("description");
 
-                    b.Property<int>("DurationHours")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("DurationHours")
+                        .HasColumnType("numeric")
+                        .HasColumnName("durationhours");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("isactive");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("text")
+                        .HasColumnName("title");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CourseCategoryId");
+
+                    b.HasIndex("CourseProviderId");
 
                     b.ToTable("courses");
                 });
@@ -137,6 +151,10 @@ namespace LearnTrack.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("CertificateUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("certificateurl");
 
                     b.Property<DateTime?>("CompletionDate")
                         .HasColumnType("timestamp with time zone")
@@ -150,9 +168,17 @@ namespace LearnTrack.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("createdat");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("duedate");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uuid")
                         .HasColumnName("employeeid");
+
+                    b.Property<DateTime?>("LastAccessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lastaccessedat");
 
                     b.Property<decimal>("ProgressPercentage")
                         .HasColumnType("numeric")
@@ -167,7 +193,15 @@ namespace LearnTrack.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updatedat");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("EmployeeId");
 
                     b.ToTable("courseassignments");
                 });
@@ -176,14 +210,21 @@ namespace LearnTrack.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
                     b.HasKey("Id");
 
@@ -194,18 +235,68 @@ namespace LearnTrack.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("text")
+                        .HasColumnName("website");
 
                     b.HasKey("Id");
 
                     b.ToTable("courseproviders");
+                });
+
+            modelBuilder.Entity("LearnTrack.Core.Entities.EmailTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("isactive");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updatedat");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("emailtemplates");
                 });
 
             modelBuilder.Entity("LearnTrack.Core.Entities.Employee", b =>
@@ -239,6 +330,10 @@ namespace LearnTrack.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("firstname");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("isactive");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("text")
@@ -258,6 +353,8 @@ namespace LearnTrack.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("employees");
                 });
 
@@ -276,6 +373,47 @@ namespace LearnTrack.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("roles");
+                });
+
+            modelBuilder.Entity("LearnTrack.Core.Entities.Todo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completedat");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("duedate");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("iscompleted");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("userid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("todos");
                 });
 
             modelBuilder.Entity("LearnTrack.Core.Entities.User", b =>
@@ -334,6 +472,55 @@ namespace LearnTrack.Infrastructure.Migrations
                     b.ToTable("users");
                 });
 
+            modelBuilder.Entity("LearnTrack.Core.Entities.Course", b =>
+                {
+                    b.HasOne("LearnTrack.Core.Entities.CourseCategory", "CourseCategory")
+                        .WithMany()
+                        .HasForeignKey("CourseCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LearnTrack.Core.Entities.CourseProvider", "CourseProvider")
+                        .WithMany()
+                        .HasForeignKey("CourseProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CourseCategory");
+
+                    b.Navigation("CourseProvider");
+                });
+
+            modelBuilder.Entity("LearnTrack.Core.Entities.CourseAssignment", b =>
+                {
+                    b.HasOne("LearnTrack.Core.Entities.Course", "Course")
+                        .WithMany("Assignments")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LearnTrack.Core.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("LearnTrack.Core.Entities.Employee", b =>
+                {
+                    b.HasOne("LearnTrack.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LearnTrack.Core.Entities.User", b =>
                 {
                     b.HasOne("LearnTrack.Core.Entities.Role", "Role")
@@ -343,6 +530,11 @@ namespace LearnTrack.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("LearnTrack.Core.Entities.Course", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 #pragma warning restore 612, 618
         }
