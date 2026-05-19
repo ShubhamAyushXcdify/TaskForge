@@ -68,3 +68,10 @@ public class AssignmentResponseDto
     public string Message { get; set; } = string.Empty;
     public object? Data { get; set; }
 }
+
+public class PatchEmployeeDto
+{
+    public string? FirstName { get; set; }
+    public string? LastName  { get; set; }
+    public string? Password  { get; set; }
+}
