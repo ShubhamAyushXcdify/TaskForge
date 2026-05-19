@@ -40,6 +40,9 @@ public class CourseAssignment
 
     [ForeignKey("CourseId")]
     public virtual Course? Course { get; set; }
+    
+    [Column("assignedby")]
+public Guid? AssignedBy { get; set; }
 
     [ForeignKey("EmployeeId")]
     public virtual Employee? Employee { get; set; }

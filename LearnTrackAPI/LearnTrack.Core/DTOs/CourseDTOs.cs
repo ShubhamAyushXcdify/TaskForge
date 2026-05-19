@@ -12,20 +12,25 @@ namespace LearnTrack.Core.DTOs
         public int TotalOverdue { get; set; }
     }
 
-    public class CourseAssignmentDetailsDto
-    {
-        public Guid AssignmentId { get; set; }
-        public Guid CourseId { get; set; }
-        public string CourseTitle { get; set; } = string.Empty;
-        public string CourseCategory { get; set; } = string.Empty;
-        public string ProviderName { get; set; } = string.Empty;
-        public double DurationHours { get; set; }
-        public DateTime AssignedDate { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public double ProgressPercentage { get; set; }
-        public DateTime? StartedAt { get; set; }
-        public DateTime? CompletedAt { get; set; }
-    }
+   public class CourseAssignmentDetailsDto
+{
+    public Guid AssignmentId { get; set; }
+    public Guid CourseId { get; set; }
+    public string CourseTitle { get; set; } = string.Empty;
+    public string? CourseUrl { get; set; }
+    public string CourseCategory { get; set; } = string.Empty;
+    public string ProviderName { get; set; } = string.Empty;
+    public double DurationHours { get; set; }
+    public DateTime AssignedDate { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public double ProgressPercentage { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public Guid? AssignedById { get; set; }
+    public string? AssignedByName { get; set; }
+    public string? AssignedByEmail { get; set; }
+    public string? AssignedByRole { get; set; }
+}
 
     public class MyCoursesResponseDto
     {
@@ -54,6 +59,7 @@ namespace LearnTrack.Core.DTOs
         public string ProviderName { get; set; } = string.Empty;
         public double DurationHours { get; set; }
         public string Description { get; set; } = string.Empty;
+        public string? CourseUrl { get; set; }
         public bool IsActive { get; set; }
     }
 
@@ -101,6 +107,7 @@ namespace LearnTrack.Core.DTOs
         public string ProviderName { get; set; } = string.Empty;
         public string? ProviderWebsite { get; set; }
         public int TotalAssignments { get; set; }
+        public string? CourseUrl { get; set; }
     }
 
     public class CourseDetailResponseDto
