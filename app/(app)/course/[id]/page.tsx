@@ -31,16 +31,17 @@ export default function CourseDetailPage() {
           headers["Authorization"] = `Bearer ${session.user.token}`;
         }
 
-        
+        // Fetch Course Detail
         const courseRes = await fetch(`${backendUrl}/api/Course/${id}`, { headers });
         const courseJson = await courseRes.json();
 
         if (courseJson?.success) {
           setCourse(courseJson.data);
         } else {
-          setError(courseJson?.Message || "Failed to load course");
+          setError(courseJson?.message || "Failed to load course");
         }
 
+        // Fetch My Courses to get assignment details
         const myRes = await fetch(`${backendUrl}/api/Course/MyCourses`, { headers });
         const myJson = await myRes.json();
 
@@ -53,13 +54,15 @@ export default function CourseDetailPage() {
               progressPercentage: userAssignment.progressPercentage || 0,
               status: userAssignment.status,
               completedAt: userAssignment.completedAt,
+              assignedBy: userAssignment.assignedBy,      
+              assignedDate: userAssignment.assignedDate,   
             });
           }
         }
       } catch (err) {
         console.error(err);
         setError("Something went wrong");
-        toast.error("Failed to load course details");  
+        toast.error("Failed to load course details");
       } finally {
         setLoading(false);
       }
@@ -68,23 +71,28 @@ export default function CourseDetailPage() {
     fetchData();
   }, [id, session, backendUrl]);
 
+  
   const handleGoToCourse = () => {
-    if (course?.providerWebsite) {
-      window.open(course.providerWebsite, "_blank", "noopener,noreferrer");
+    if (!course) return;
+
+    const targetUrl = course.courseUrl || `https://www.google.com/search?q=${course.title}`;
+
+    if (targetUrl) {
+      window.open(targetUrl, "_blank", "noopener,noreferrer");
     } else {
-      toast.error("No external link available for this course.");  
+      toast.error("No course link available.");
     }
   };
 
   const handleRequestCourse = () => {
     if (!session?.user?.token) {
-      toast.error("Please login to request this course");  
+      toast.error("Please login to request this course");
       return;
     }
 
     setRequesting(true);
     setTimeout(() => {
-      toast.success("Request Sent Successfully!", {      
+      toast.success("Request Sent Successfully!", {
         description: `Your request for "${course?.title}" has been sent. Manager will review it soon.`,
         duration: 6000,
       });
@@ -112,6 +120,10 @@ export default function CourseDetailPage() {
   const isEnrolled = !!assignment;
   const progress = assignment?.progressPercentage || 0;
   const isCompleted = assignment?.status === "Completed";
+
+  // Who assigned the course
+  const assignedBy = assignment?.assignedBy;
+  const assignedByName = assignedBy?.name || "Self";
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -141,6 +153,22 @@ export default function CourseDetailPage() {
               <MetaPill icon="⏱" label={`${course.durationHours} hours`} />
               <MetaPill icon="👥" label={`${course.totalAssignments} enrolled`} />
             </div>
+
+            {/* Assigned By Section */}
+            {isEnrolled && (
+              <div className="mb-6 bg-slate-50 rounded-2xl p-4 text-sm">
+                <p className="text-slate-500 mb-1">Assigned by</p>
+                <p className="font-medium text-slate-800">
+                  {assignedByName}
+                  {assignedBy?.role && <span className="text-slate-500 text-xs ml-2">({assignedBy.role})</span>}
+                </p>
+                {assignment?.assignedDate && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    on {new Date(assignment.assignedDate).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            )}
 
             {isEnrolled && (
               <div className="mb-7 bg-slate-50 rounded-2xl p-4">
