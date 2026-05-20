@@ -28,16 +28,6 @@ export default function AssignModal({ onClose, onAssigned }: AssignModalProps) {
   useEffect(() => {
     setLoadingData(true);
     
-    // apiFetch<any>("/api/admin/employees").then((response) => {
-    //   const list = response.success ? response.employees : (response.data ?? response.data ?? response ?? []);
-    //   const employeesList = Array.isArray(list) ? list.map(mapEmployee) : [];
-    //   setEmployees(employeesList);
-    //   toast.success(`Loaded ${employeesList.length} employees`);
-    //   return employeesList;
-    // }).catch(() => {
-    //   toast.error("Failed to load employees");
-    //   setEmployees([]);
-    //   return [];
 
     apiFetch<any>("/api/admin/employees")
   .then((response) => {

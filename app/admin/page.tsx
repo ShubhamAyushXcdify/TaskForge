@@ -4,15 +4,15 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { signOut, useSession } from "next-auth/react";
 
 
-// import Overview      from "./components/admin/Overview";
+import Overview      from "./overview/overview";
 import Employees     from "./employee/employee";
 import Courses       from "./courses/course";
 import AssignmentList from "./assignments/assignmentList";
 // import Reports       from "./components/Reports";
-import Settings      from "./components/setting";
+import Settings      from "./settings/settting";
 // import Notifications from "./components/notification";
 
-import { Overview, Reports, Notifications } from "./components/notification";
+import {Reports, Notifications } from "./components/notification";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -207,7 +207,7 @@ export default function AdminPage() {
 
         {/* Tab content */}
         <div className="p-8">
-          {activeTab === "overview"      && <Overview      />}
+          {activeTab === "overview" && <Overview onNavigate={setActiveTab} />}
           {activeTab === "assignments"   && <AssignmentList   />}
           {activeTab === "employees"     && <Employees     />}
           {activeTab === "courses"       && <Courses       />}

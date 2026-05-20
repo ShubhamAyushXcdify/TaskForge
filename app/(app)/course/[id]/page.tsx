@@ -54,7 +54,7 @@ export default function CourseDetailPage() {
               progressPercentage: userAssignment.progressPercentage || 0,
               status: userAssignment.status,
               completedAt: userAssignment.completedAt,
-              assignedBy: userAssignment.assignedBy,      
+              assignedByName: userAssignment.assignedByName,      
               assignedDate: userAssignment.assignedDate,   
             });
           }
@@ -122,8 +122,8 @@ export default function CourseDetailPage() {
   const isCompleted = assignment?.status === "Completed";
 
   // Who assigned the course
-  const assignedBy = assignment?.assignedBy;
-  const assignedByName = assignedBy?.name || "Self";
+  const assignedBy = assignment?.assignedByName;
+  const assignedByName = assignedBy|| "Self";
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">

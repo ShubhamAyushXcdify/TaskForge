@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -6,7 +5,11 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import type { MyCourse, DashboardStats } from "@/types/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const safeJsonParse = async (res: Response): Promise<any> => {
+  if (res.status === 204) return { success: true };
+  const text = await res.text();
+  return text ? JSON.parse(text) : { success: res.ok };
+};
 
 interface CertificateUploadResponse {
   success: boolean;
@@ -24,11 +27,9 @@ interface EditForm {
   confirmPassword: string;
 }
 
-
 function resolveCertUrl(raw: string | undefined | null, backendUrl: string): string | null {
   if (!raw) return null;
   if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-  // strip leading "wwwroot" if present
   const clean = raw.replace(/^wwwroot\//, "/").replace(/^\/?/, "/");
   return `${backendUrl}${clean}`;
 }
@@ -64,8 +65,9 @@ export default function ProfilePage() {
   // ── Derived display values ──────────────────────────────────────────────────
 
   const fullName = user?.name?.trim() || "User";
-  // employee ID – adjust the field name to match your session type
-  const employeeId: string = (user as any)?.employeeId ?? (user as any)?.empId ?? "";
+
+  // FIX: log this in dev to find the right field name if still getting 405
+  const employeeId: string = user?.employeeCode || "";
 
   const initials = useMemo(
     () =>
@@ -78,10 +80,13 @@ export default function ProfilePage() {
     [fullName]
   );
 
+  // FIX: correct filter — both "InProgress" and "Assigned" shown together
   const { completedCourses, inProgressCourses } = useMemo(
     () => ({
       completedCourses: myCourses.filter((c) => c.status === "Completed"),
-      inProgressCourses: myCourses.filter((c) => c.status === "InProgress"),
+      inProgressCourses: myCourses.filter(
+        (c) => c.status === "InProgress" || c.status === "Assigned"
+      ),
     }),
     [myCourses]
   );
@@ -124,6 +129,7 @@ export default function ProfilePage() {
           fetch(`${backendUrl}/api/Dashboard/stats`, { headers }),
         ]);
 
+        // FIX: removed the stray `await Promise.all` that was outside this function
         const [coursesData, statsData] = await Promise.all([
           coursesRes.json(),
           statsRes.json(),
@@ -131,10 +137,15 @@ export default function ProfilePage() {
 
         if (coursesData?.success) {
           const raw: MyCourse[] = coursesData.data?.assignments ?? [];
-          // Merge localStorage fallback, then normalize every cert URL immediately
           const courses = raw.map((c) => {
-            const rawUrl = c.certificateUrl || localStorage.getItem(`cert_${c.assignmentId}`) || undefined;
-            return { ...c, certificateUrl: resolveCertUrl(rawUrl, backendUrl) ?? undefined };
+            const rawUrl =
+              c.certificateUrl ||
+              localStorage.getItem(`cert_${c.assignmentId}`) ||
+              undefined;
+            return {
+              ...c,
+              certificateUrl: resolveCertUrl(rawUrl, backendUrl) ?? undefined,
+            };
           });
           setMyCourses(courses);
         }
@@ -155,7 +166,9 @@ export default function ProfilePage() {
 
   // Sync edit form when session loads
   useEffect(() => {
-    setEditForm((prev) => ({ ...prev, name: fullName }));
+    if (fullName && fullName !== "User") {
+      setEditForm((prev) => ({ ...prev, name: fullName }));
+    }
   }, [fullName]);
 
   // ── Certificate upload ──────────────────────────────────────────────────────
@@ -201,8 +214,8 @@ export default function ProfilePage() {
             description: `${data.courseTitle} marked as completed`,
           });
 
-          // Normalise immediately so "View" button works without a page reload
-          const resolvedUrl = resolveCertUrl(data.certificateUrl, backendUrl) ?? data.certificateUrl;
+          const resolvedUrl =
+            resolveCertUrl(data.certificateUrl, backendUrl) ?? data.certificateUrl;
           localStorage.setItem(`cert_${selectedAssignmentId}`, resolvedUrl);
 
           setMyCourses((prev) =>
@@ -232,10 +245,21 @@ export default function ProfilePage() {
     [selectedAssignmentId, token, backendUrl]
   );
 
-  // ── Save profile ────────────────────────────────────────────────────────────
+  // ── Save Profile ────────────────────────────────────────────────────────────
 
   const handleSaveProfile = useCallback(async () => {
-    const nameChanged = editForm.name.trim() && editForm.name.trim() !== fullName;
+    // FIX: debug log — remove once confirmed working
+    console.log("session user →", JSON.stringify(user));
+    console.log("employeeId →", employeeId);
+
+    if (!employeeId) {
+      toast.error("Employee ID not found. Please logout and login again.");
+      return;
+    }
+
+    // FIX: also check trimmed name is non-empty before comparing
+    const trimmedName = editForm.name.trim();
+    const nameChanged = trimmedName.length > 0 && trimmedName !== fullName;
     const passwordChanged = editForm.newPassword.length > 0;
 
     if (!nameChanged && !passwordChanged) {
@@ -256,41 +280,39 @@ export default function ProfilePage() {
 
     setSaving(true);
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
-
       const payload: Record<string, string> = {};
-      if (nameChanged) payload.name = editForm.name.trim();
+      if (nameChanged) payload.name = trimmedName;
       if (passwordChanged) payload.newPassword = editForm.newPassword;
 
       const res = await fetch(`${backendUrl}/api/Employee/${employeeId}`, {
         method: "PATCH",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      // FIX: log raw status so you can see exactly what the server returns
+      console.log("PATCH status →", res.status);
 
-      if (data?.success) {
+      const data = await safeJsonParse(res);
+      console.log("PATCH response →", data);
+
+      if (res.ok && (data?.success !== false)) {
         toast.success("Profile updated successfully!");
         setEditOpen(false);
-        setEditForm((prev) => ({
-          ...prev,
-          newPassword: "",
-          confirmPassword: "",
-        }));
+        setEditForm((prev) => ({ ...prev, newPassword: "", confirmPassword: "" }));
       } else {
-        toast.error(data?.message || "Update failed");
+        toast.error(data?.message || `Update failed (${res.status})`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Failed to update profile");
+      toast.error(err.message || "Failed to update profile");
     } finally {
       setSaving(false);
     }
-  }, [editForm, fullName, token, backendUrl]);
+  }, [editForm, fullName, token, backendUrl, employeeId, user]);
 
   // ── Loading state ───────────────────────────────────────────────────────────
 
@@ -322,7 +344,6 @@ export default function ProfilePage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
         <div className="bg-gradient-to-r from-teal-700 to-teal-600 text-white rounded-3xl px-6 sm:px-8 py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
           <div className="flex items-center gap-5">
-            {/* Avatar */}
             <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold border border-white/30 shrink-0 select-none">
               {initials}
             </div>
@@ -418,12 +439,10 @@ export default function ProfilePage() {
                       key={course.assignmentId}
                       className="flex items-center gap-4 p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl border border-teal-100"
                     >
-                      {/* Trophy icon */}
                       <div className="w-11 h-11 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">
                         🏆
                       </div>
 
-                      {/* Course info */}
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-800 truncate">
                           {course.courseTitle}
@@ -440,7 +459,6 @@ export default function ProfilePage() {
                         )}
                       </div>
 
-                      {/* View cert if available */}
                       {certUrl && (
                         <a
                           href={certUrl}
@@ -461,38 +479,38 @@ export default function ProfilePage() {
                         </a>
                       )}
 
-                     {certUrl ? (
-  <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-xl text-xs font-semibold shrink-0">
-    <span className="text-sm">✅</span>
-    Done
-  </div>
-) : (
-  <button
-    onClick={() => handleUploadClick(course.assignmentId)}
-    disabled={uploadingId === course.assignmentId}
-    title="Upload Certificate"
-    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 shrink-0 ${
-      uploadingId === course.assignmentId
-        ? "bg-teal-400 text-white cursor-wait"
-        : "bg-teal-600 hover:bg-teal-700 text-white"
-    }`}
-  >
-    {uploadingId === course.assignmentId ? (
-      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-    ) : (
-      <>
-        <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-          <path
-            fillRule="evenodd"
-            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
-            clipRule="evenodd"
-          />
-        </svg>
-        Upload
-      </>
-    )}
-  </button>
-)}
+                      {certUrl ? (
+                        <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-xl text-xs font-semibold shrink-0">
+                          <span className="text-sm">✅</span>
+                          Done
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleUploadClick(course.assignmentId)}
+                          disabled={uploadingId === course.assignmentId}
+                          title="Upload Certificate"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 shrink-0 ${
+                            uploadingId === course.assignmentId
+                              ? "bg-teal-400 text-white cursor-wait"
+                              : "bg-teal-600 hover:bg-teal-700 text-white"
+                          }`}
+                        >
+                          {uploadingId === course.assignmentId ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path
+                                  fillRule="evenodd"
+                                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              Upload
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -511,7 +529,7 @@ export default function ProfilePage() {
               Learning History
             </p>
 
-            {/* In progress */}
+            {/* In Progress + Assigned */}
             {inProgressCourses.length > 0 && (
               <div className="mb-8">
                 <div className="flex items-center gap-2 mb-3">
@@ -529,9 +547,14 @@ export default function ProfilePage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-800 truncate">{course.courseTitle}</p>
                         <p className="text-xs text-slate-500 mt-0.5">{course.providerName}</p>
+                        {/* Show badge if Assigned vs InProgress */}
+                        {course.status === "Assigned" && (
+                          <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">
+                            Assigned
+                          </span>
+                        )}
                       </div>
 
-                      {/* Progress bar + % */}
                       <div className="flex items-center gap-3 shrink-0">
                         <div className="hidden sm:block w-20 h-1.5 bg-amber-200 rounded-full overflow-hidden">
                           <div
@@ -649,7 +672,7 @@ export default function ProfilePage() {
                     {employeeId}
                   </div>
                 </div>
-              )}{/* Upload cert button — always visible on completed courses */}
+              )}
 
               {/* Email – always read-only */}
               <div>
@@ -678,7 +701,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Divider */}
+              {/* Change Password */}
               <div className="border-t border-dashed border-slate-200 pt-2">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">

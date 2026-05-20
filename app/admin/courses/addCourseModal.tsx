@@ -22,6 +22,7 @@ export default function AddCourseModal({
     providerId:   "",
     durationHours: "",
     isActive:     true,
+    courseUrl: "",
   });
 
   const [categories, setCategories] = useState<CourseCategory[]>([]);
@@ -83,12 +84,11 @@ export default function AddCourseModal({
 body: JSON.stringify({
   title: form.title,
   description: form.description,
-
   categoryId: form.categoryId || null,
   providerId: form.providerId || null,
-
   durationHours: parseInt(form.durationHours, 10),
   isActive: form.isActive,
+  courseUrl: form.courseUrl,
 }),
 });
 
@@ -152,6 +152,18 @@ body: JSON.stringify({
               className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 outline-none resize-none transition"
             />
           </div>
+          <div>
+  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+    Course URL
+  </label>
+
+  <input
+    value={form.courseUrl}
+    onChange={setStr("courseUrl")}
+    placeholder="https://..."
+    className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 outline-none transition"
+  />
+</div>
 
           {/* Duration + Status */}
           <div className="grid grid-cols-2 gap-3">
