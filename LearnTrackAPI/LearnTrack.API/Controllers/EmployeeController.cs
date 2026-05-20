@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using LearnTrack.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using LearnTrack.Core.DTOs;
+using System.Security.Claims;
 
 namespace LearnTrack.API.Controllers;
 
-[Authorize(Roles = "Admin,Manager")]
 [ApiController]
 [Route("api/[controller]")]
 public class EmployeeController : ControllerBase
@@ -18,6 +18,7 @@ public class EmployeeController : ControllerBase
         _context = context;
     }
 
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -42,6 +43,7 @@ public class EmployeeController : ControllerBase
         });
     }
 
+    [Authorize(Roles = "Admin,Manager")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -68,17 +70,25 @@ public class EmployeeController : ControllerBase
         });
     }
 
-    // PATCH: api/employee/{id}
-    // Only FirstName, LastName, and Password can be changed
-    [HttpPatch("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] PatchEmployeeDto dto)
+    // PATCH: api/employee/me
+    // User updates their own profile — id taken from JWT, not URL
+    [Authorize]
+    [HttpPatch("me")]
+    public async Task<IActionResult> UpdateMe([FromBody] PatchEmployeeDto dto)
     {
         if (dto == null)
             return BadRequest(new { Success = false, Message = "Request body is required" });
 
-        var user = await _context.Users.FindAsync(id);
+        // Get user id from JWT token automatically
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null)
+            return Unauthorized(new { Success = false, Message = "User not authenticated" });
+
+        var userId = Guid.Parse(userIdClaim);
+
+        var user = await _context.Users.FindAsync(userId);
         if (user == null)
-            return NotFound(new { Success = false, Message = "Employee not found" });
+            return NotFound(new { Success = false, Message = "User not found" });
 
         if (!string.IsNullOrWhiteSpace(dto.FirstName))
             user.FirstName = dto.FirstName;
@@ -94,7 +104,7 @@ public class EmployeeController : ControllerBase
         return Ok(new
         {
             Success  = true,
-            Message  = "Employee updated successfully",
+            Message  = "Profile updated successfully",
             Id       = user.Id,
             FullName = $"{user.FirstName} {user.LastName}"
         });
