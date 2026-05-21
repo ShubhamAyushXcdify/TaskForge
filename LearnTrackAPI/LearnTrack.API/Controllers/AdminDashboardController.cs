@@ -17,7 +17,6 @@ public class AdminDashboardController : ControllerBase
         _context = context;
     }
 
-    // GET: api/admin/dashboard
     [HttpGet]
     public async Task<IActionResult> GetDashboard()
     {
@@ -29,16 +28,16 @@ public class AdminDashboardController : ControllerBase
         var activeCourses   = await _context.Courses.CountAsync(c => c.IsActive);
 
         var allAssignments  = await _context.CourseAssignments.ToListAsync();
-        var totalAssignments   = allAssignments.Count;
-        var completedCount     = allAssignments.Count(a => a.Status == "Completed");
-        var inProgressCount    = allAssignments.Count(a => a.Status == "InProgress");
-        var assignedCount      = allAssignments.Count(a => a.Status == "Assigned" || a.Status == "Pending");
-        var overdueCount       = allAssignments.Count(a =>
+        var totalAssignments = allAssignments.Count;
+        var completedCount   = allAssignments.Count(a => a.Status == "Completed");
+        var inProgressCount  = allAssignments.Count(a => a.Status == "InProgress");
+        var assignedCount    = allAssignments.Count(a => a.Status == "Assigned" || a.Status == "Pending");
+        var overdueCount     = allAssignments.Count(a =>
             a.DueDate.HasValue &&
             a.DueDate.Value < now &&
             a.Status != "Completed");
-        var certsIssued        = allAssignments.Count(a => a.CertificateUrl != null);
-        var completionRate     = totalAssignments > 0
+        var certsIssued      = allAssignments.Count(a => a.CertificateUrl != null);
+        var completionRate   = totalAssignments > 0
             ? Math.Round((double)completedCount / totalAssignments * 100, 2)
             : 0;
 
@@ -51,47 +50,78 @@ public class AdminDashboardController : ControllerBase
             Overdue    = overdueCount
         };
 
-        // ── Category breakdown ───────────────────────────────────────
-        var categoryBreakdown = await (
+        // ── Category breakdown — load into memory first, then calculate ──
+        var rawCategoryData = await (
             from course in _context.Courses
             join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
-            join assignment in _context.CourseAssignments on course.Id equals assignment.CourseId into assignmentGroup
+            join assignment in _context.CourseAssignments
+                on course.Id equals assignment.CourseId into assignmentGroup
             from assignment in assignmentGroup.DefaultIfEmpty()
-            group new { assignment, course } by new { category.Id, category.Name } into g
             select new
             {
-                Category       = g.Key.Name,
-                TotalCourses   = g.Select(x => x.course.Id).Distinct().Count(),
-                Assigned       = g.Count(x => x.assignment != null),
-                Completed      = g.Count(x => x.assignment != null && x.assignment.Status == "Completed"),
-                CompletionRate = g.Count(x => x.assignment != null) > 0
-                    ? Math.Round(
-                        (double)g.Count(x => x.assignment != null && x.assignment.Status == "Completed") /
-                        g.Count(x => x.assignment != null) * 100, 2)
-                    : 0.0
+                CategoryId   = category.Id,
+                CategoryName = category.Name,
+                CourseId     = course.Id,
+                Status       = assignment != null ? assignment.Status : null
             }
         ).ToListAsync();
 
-        // ── Top 3 most assigned courses ──────────────────────────────
-        var topCourses = await (
+        var categoryBreakdown = rawCategoryData
+            .GroupBy(x => new { x.CategoryId, x.CategoryName })
+            .Select(g =>
+            {
+                var assigned  = g.Count(x => x.Status != null);
+                var completed = g.Count(x => x.Status == "Completed");
+                return new
+                {
+                    Category       = g.Key.CategoryName,
+                    TotalCourses   = g.Select(x => x.CourseId).Distinct().Count(),
+                    Assigned       = assigned,
+                    Completed      = completed,
+                    CompletionRate = assigned > 0
+                        ? Math.Round((double)completed / assigned * 100, 2)
+                        : 0.0
+                };
+            }).ToList();
+
+        // ── Top 3 most assigned courses — load into memory first ─────
+        var rawCourseData = await (
             from course in _context.Courses
-            join assignment in _context.CourseAssignments on course.Id equals assignment.CourseId into ag
-            orderby ag.Count() descending
+            join assignment in _context.CourseAssignments
+                on course.Id equals assignment.CourseId into ag
+            from assignment in ag.DefaultIfEmpty()
             select new
             {
-                CourseId      = course.Id,
-                Title         = course.Title,
-                CourseUrl     = course.CourseUrl,
-                TotalAssigned = ag.Count(),
-                Completed     = ag.Count(a => a.Status == "Completed"),
-                CompletionRate = ag.Count() > 0
-                    ? Math.Round((double)ag.Count(a => a.Status == "Completed") / ag.Count() * 100, 2)
-                    : 0.0
+                CourseId  = course.Id,
+                Title     = course.Title,
+                CourseUrl = course.CourseUrl,
+                Status    = assignment != null ? assignment.Status : null
             }
-        ).Take(3).ToListAsync();
+        ).ToListAsync();
+
+        var topCourses = rawCourseData
+            .GroupBy(x => new { x.CourseId, x.Title, x.CourseUrl })
+            .Select(g =>
+            {
+                var total     = g.Count(x => x.Status != null);
+                var completed = g.Count(x => x.Status == "Completed");
+                return new
+                {
+                    CourseId       = g.Key.CourseId,
+                    Title          = g.Key.Title,
+                    CourseUrl      = g.Key.CourseUrl,
+                    TotalAssigned  = total,
+                    Completed      = completed,
+                    CompletionRate = total > 0
+                        ? Math.Round((double)completed / total * 100, 2)
+                        : 0.0
+                };
+            })
+            .OrderByDescending(x => x.TotalAssigned)
+            .Take(3)
+            .ToList();
 
         // ── Activity feed (last 10) ───────────────────────────────────
-        // Completed assignments
         var completedActivities = await (
             from a in _context.CourseAssignments
             join emp in _context.Employees on a.EmployeeId equals emp.Id
@@ -109,7 +139,6 @@ public class AdminDashboardController : ControllerBase
             }
         ).Take(10).ToListAsync();
 
-        // InProgress (started) assignments
         var startedActivities = await (
             from a in _context.CourseAssignments
             join emp in _context.Employees on a.EmployeeId equals emp.Id
@@ -127,7 +156,6 @@ public class AdminDashboardController : ControllerBase
             }
         ).Take(10).ToListAsync();
 
-        // Assigned (enrolled) assignments
         var enrolledActivities = await (
             from a in _context.CourseAssignments
             join emp in _context.Employees on a.EmployeeId equals emp.Id
@@ -145,7 +173,6 @@ public class AdminDashboardController : ControllerBase
             }
         ).Take(10).ToListAsync();
 
-        // Merge and take last 10 by time
         var activityFeed = completedActivities
             .Select(x => new { x.Id, x.Type, x.EmployeeName, x.Action, x.CourseTitle, x.Time })
             .Concat(startedActivities
@@ -196,13 +223,13 @@ public class AdminDashboardController : ControllerBase
             {
                 Stats = new
                 {
-                    TotalEmployees  = totalEmployees,
-                    ActiveEmployees = activeEmployees,
-                    ActiveCourses   = activeCourses,
+                    TotalEmployees   = totalEmployees,
+                    ActiveEmployees  = activeEmployees,
+                    ActiveCourses    = activeCourses,
                     TotalAssignments = totalAssignments,
-                    CompletionRate  = completionRate,
-                    OverdueCount    = overdueCount,
-                    CertsIssued     = certsIssued
+                    CompletionRate   = completionRate,
+                    OverdueCount     = overdueCount,
+                    CertsIssued      = certsIssued
                 },
                 StatusBreakdown    = statusBreakdown,
                 CategoryBreakdown  = categoryBreakdown,

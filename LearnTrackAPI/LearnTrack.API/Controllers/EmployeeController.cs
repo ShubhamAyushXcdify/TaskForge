@@ -71,7 +71,7 @@ public class EmployeeController : ControllerBase
     }
 
     // PATCH: api/employee/me
-    // User updates their own profile — id taken from JWT, not URL
+    // User updates their own profile — id taken from JWT automatically
     [Authorize]
     [HttpPatch("me")]
     public async Task<IActionResult> UpdateMe([FromBody] PatchEmployeeDto dto)
@@ -79,13 +79,13 @@ public class EmployeeController : ControllerBase
         if (dto == null)
             return BadRequest(new { Success = false, Message = "Request body is required" });
 
-        // Get user id from JWT token automatically
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userIdClaim == null)
             return Unauthorized(new { Success = false, Message = "User not authenticated" });
 
         var userId = Guid.Parse(userIdClaim);
 
+        // Update users table
         var user = await _context.Users.FindAsync(userId);
         if (user == null)
             return NotFound(new { Success = false, Message = "User not found" });
@@ -98,6 +98,21 @@ public class EmployeeController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(dto.Password))
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+
+        // Update employees table too
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        if (employee != null)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.FirstName))
+                employee.FirstName = dto.FirstName;
+
+            if (!string.IsNullOrWhiteSpace(dto.LastName))
+                employee.LastName = dto.LastName;
+
+            employee.UpdatedAt = DateTime.UtcNow;
+        }
 
         await _context.SaveChangesAsync();
 
