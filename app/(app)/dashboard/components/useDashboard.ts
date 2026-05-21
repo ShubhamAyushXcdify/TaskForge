@@ -11,7 +11,7 @@ import type { DashboardStats, WeeklyHours, CategoryBreakdown, Activity, Todo } f
 import { DEFAULT_STATS } from "@/app/(app)/dashboard/components/dashboard";
 
 export function useDashboard() {
-  const { data: session } = useSession();
+  const { data: session,status } = useSession();
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const token = session?.user?.token as string | undefined;
 
@@ -116,7 +116,6 @@ export function useDashboard() {
   };
 
   return {
-    session,
     stats, statsLoading, statsError,
     weeklyHours, weeklyLoading,
     categories, categoriesLoading,

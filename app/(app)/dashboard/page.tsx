@@ -10,10 +10,10 @@ import { TodoCard }          from "@/app/(app)/dashboard/components/TodoCard";
 import { ActivityDropdown }  from "@/app/(app)/dashboard/components/ActivityDropdown";
 import { useDashboard }      from "@/app/(app)/dashboard/components/useDashboard";
 import type { ChartKey }     from "@/app/(app)/dashboard/components/dashboard";
+import { useSession } from "next-auth/react";
 
 export default function DashboardPage() {
   const {
-    session,
     stats, statsLoading, statsError,
     weeklyHours, weeklyLoading,
     categories, categoriesLoading,
@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
   const [expandedChart, setExpandedChart] = useState<ChartKey | null>(null);
   const [showActivity,  setShowActivity]  = useState(false);
-
+  const { data: session } = useSession();
 
   const fullName  = session?.user?.name ?? "";
   const firstName = fullName.split(" ")[0] || "there";

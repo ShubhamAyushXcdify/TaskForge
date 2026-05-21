@@ -12,11 +12,11 @@ import AssignmentList from "./assignments/assignmentList";
 import Settings      from "./settings/settting";
 // import Notifications from "./components/notification";
 
-import {Reports, Notifications } from "./components/notification";
+import {Notifications } from "./components/notification";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "assignments" | "employees" | "courses" | "reports" | "settings" | "notifications";
+type Tab = "overview" | "assignments" | "employees" | "courses" | "settings" | "notifications";
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
@@ -25,7 +25,6 @@ const navItems: { icon: string; label: string; tab: Tab; badge?: string }[] = [
   { icon: "📋", label: "Assignments",   tab: "assignments"   },
   { icon: "👥", label: "Employees",     tab: "employees"      },
   { icon: "📚", label: "Courses",       tab: "courses"        },
-  { icon: "📈", label: "Reports",       tab: "reports"        },
   { icon: "⚙️", label: "Settings",      tab: "settings"       },
   { icon: "🔔", label: "Notifications", tab: "notifications"  },
 ];
@@ -35,11 +34,9 @@ const tabSubtitles: Record<Tab, string> = {
   assignments:   "Track and manage all course assignments",
   employees:     "Manage employee learning progress",
   courses:       "Manage your course catalogue",
-  reports:       "Analytics & department insights",
   settings:      "Categories, providers & system config",
   notifications: "Send announcements to employees",
 };
-
 
 
 export default function AdminPage() {
@@ -211,7 +208,6 @@ export default function AdminPage() {
           {activeTab === "assignments"   && <AssignmentList   />}
           {activeTab === "employees"     && <Employees     />}
           {activeTab === "courses"       && <Courses       />}
-          {activeTab === "reports"       && <Reports       />}
           {activeTab === "settings"      && <Settings      />}
           {activeTab === "notifications" && <Notifications />}
         </div>

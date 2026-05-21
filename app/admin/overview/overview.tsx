@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApiFetch } from "@/app/admin/assignments/apiFetch";
+import { useSession } from "next-auth/react";
 
 type Tab = "overview" | "assignments" | "employees" | "courses" | "reports" | "settings" | "notifications";
 
@@ -225,7 +226,7 @@ function CategoryBars({ categories }: { categories: CategoryBreakdown[] }) {
   return (
     <div className="flex flex-col gap-3">
       {sorted.map((cat, i) => {
-        const color = paletteColor(i);   // ← index-based, works for any number of categories
+        const color = paletteColor(i);
         const pct   = Math.round(cat.completionRate);
         return (
           <div key={cat.category}>
@@ -365,11 +366,15 @@ function OverviewSkeleton() {
 
 export default function Overview({ onNavigate }: { onNavigate?: (tab: Tab) => void }) {
   const apiFetch = useApiFetch();
+  const {status} = useSession();
   const [data, setData]       = useState<DashboardData | null>(null);
   const [error, setError]     = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+
+    if(status !=="authenticated") return;
+
     async function fetchDashboard() {
       try {
         const json = await apiFetch<ApiResponse>("/api/admin/dashboard");
@@ -382,7 +387,7 @@ export default function Overview({ onNavigate }: { onNavigate?: (tab: Tab) => vo
       }
     }
     fetchDashboard();
-  }, [apiFetch]);
+  }, [apiFetch,status]);
 
   if (loading) return <OverviewSkeleton />;
 
@@ -406,9 +411,9 @@ export default function Overview({ onNavigate }: { onNavigate?: (tab: Tab) => vo
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard
           icon="👥"
-          label="Total employees"
-          value={stats.totalEmployees}
-          sub={`${stats.activeEmployees} active`}
+          label="Active employees"
+          value={stats.activeEmployees}
+          sub={`${stats.totalEmployees} Total Employees`}
           onClick={onNavigate ? () => onNavigate("employees") : undefined}
         />
         <MetricCard
