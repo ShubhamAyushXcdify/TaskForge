@@ -20,8 +20,6 @@ public class AdminDashboardController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetDashboard()
     {
-        // ✅ Fix: Use standard UtcNow but ensure comparisons are handled cleanly 
-        // across server environments and PostgreSQL timestamptz offsets.
         var now = DateTime.UtcNow;
 
         // ── Core counts ──────────────────────────────────────────────
@@ -29,20 +27,23 @@ public class AdminDashboardController : ControllerBase
         var activeEmployees = await _context.Employees.CountAsync(e => e.IsActive);
         var activeCourses   = await _context.Courses.CountAsync(c => c.IsActive);
 
-        var allAssignments  = await _context.CourseAssignments.ToListAsync();
+        var allAssignments   = await _context.CourseAssignments.ToListAsync();
         var totalAssignments = allAssignments.Count;
         var completedCount   = allAssignments.Count(a => a.Status == "Completed");
         var inProgressCount  = allAssignments.Count(a => a.Status == "InProgress");
         var assignedCount    = allAssignments.Count(a => a.Status == "Assigned" || a.Status == "Pending");
-        
-        // ✅ Fix: Force a unified Kind comparison or evaluation in memory to avoid offset calculation drops
-        var overdueCount     = allAssignments.Count(a =>
-            a.DueDate.HasValue &&
-            (a.DueDate.Value.Kind == DateTimeKind.Utc ? a.DueDate.Value : a.DueDate.Value.ToUniversalTime()) < now &&
-            a.Status != "Completed");
-            
-        var certsIssued      = allAssignments.Count(a => a.CertificateUrl != null);
-        var completionRate   = totalAssignments > 0
+
+        // ✅ Fix: Count status="Overdue" AND date-based overdue
+        var overdueCount = allAssignments.Count(a =>
+            a.Status == "Overdue" ||
+            (a.DueDate.HasValue &&
+             (a.DueDate.Value.Kind == DateTimeKind.Utc
+                ? a.DueDate.Value
+                : a.DueDate.Value.ToUniversalTime()) < now &&
+             a.Status != "Completed"));
+
+        var certsIssued    = allAssignments.Count(a => a.CertificateUrl != null);
+        var completionRate = totalAssignments > 0
             ? Math.Round((double)completedCount / totalAssignments * 100, 2)
             : 0;
 
@@ -55,7 +56,7 @@ public class AdminDashboardController : ControllerBase
             Overdue    = overdueCount
         };
 
-        // ── Category breakdown ─────────────────────────────────────────
+        // ── Category breakdown ────────────────────────────────────────
         var rawCategoryData = await (
             from course in _context.Courses
             join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
@@ -89,7 +90,7 @@ public class AdminDashboardController : ControllerBase
                 };
             }).ToList();
 
-        // ── Top 3 most assigned courses ──────────────────────────────
+        // ── Top 3 most assigned courses ───────────────────────────────
         var rawCourseData = await (
             from course in _context.Courses
             join assignment in _context.CourseAssignments
@@ -188,16 +189,19 @@ public class AdminDashboardController : ControllerBase
             .Take(10)
             .ToList();
 
-        // ── Overdue employees ────────────────────────────────────────
-        // ✅ Fix: Load overdue verification parameters cleanly into memory 
-        // to handle mixed database timezone schemas securely without throwing Postgres mapping errors
+        // ── Overdue employees ─────────────────────────────────────────
+        // ✅ Fix: Include status="Overdue" AND date-based overdue
         var overdueEmployees = allAssignments
-            .Where(a => a.DueDate.HasValue && 
-                        (a.DueDate.Value.Kind == DateTimeKind.Utc ? a.DueDate.Value : a.DueDate.Value.ToUniversalTime()) < now && 
-                        a.Status != "Completed")
-            .Join(await _context.Employees.ToListAsync(), 
-                a => a.EmployeeId, 
-                e => e.Id, 
+            .Where(a =>
+                a.Status == "Overdue" ||
+                (a.DueDate.HasValue &&
+                 (a.DueDate.Value.Kind == DateTimeKind.Utc
+                    ? a.DueDate.Value
+                    : a.DueDate.Value.ToUniversalTime()) < now &&
+                 a.Status != "Completed"))
+            .Join(await _context.Employees.ToListAsync(),
+                a => a.EmployeeId,
+                e => e.Id,
                 (a, e) => e)
             .GroupBy(e => new { e.Id, e.FirstName, e.LastName, e.EmployeeCode })
             .OrderByDescending(g => g.Count())
@@ -210,7 +214,7 @@ public class AdminDashboardController : ControllerBase
             })
             .ToList();
 
-        // ── Recent certificates ──────────────────────────────────────
+        // ── Recent certificates ───────────────────────────────────────
         var recentCertificates = await (
             from a in _context.CourseAssignments
             join emp in _context.Employees on a.EmployeeId equals emp.Id
