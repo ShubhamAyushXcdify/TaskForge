@@ -20,6 +20,8 @@ public class AdminDashboardController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetDashboard()
     {
+        // ✅ Fix: Use standard UtcNow but ensure comparisons are handled cleanly 
+        // across server environments and PostgreSQL timestamptz offsets.
         var now = DateTime.UtcNow;
 
         // ── Core counts ──────────────────────────────────────────────
@@ -32,10 +34,13 @@ public class AdminDashboardController : ControllerBase
         var completedCount   = allAssignments.Count(a => a.Status == "Completed");
         var inProgressCount  = allAssignments.Count(a => a.Status == "InProgress");
         var assignedCount    = allAssignments.Count(a => a.Status == "Assigned" || a.Status == "Pending");
+        
+        // ✅ Fix: Force a unified Kind comparison or evaluation in memory to avoid offset calculation drops
         var overdueCount     = allAssignments.Count(a =>
             a.DueDate.HasValue &&
-            a.DueDate.Value < now &&
+            (a.DueDate.Value.Kind == DateTimeKind.Utc ? a.DueDate.Value : a.DueDate.Value.ToUniversalTime()) < now &&
             a.Status != "Completed");
+            
         var certsIssued      = allAssignments.Count(a => a.CertificateUrl != null);
         var completionRate   = totalAssignments > 0
             ? Math.Round((double)completedCount / totalAssignments * 100, 2)
@@ -50,7 +55,7 @@ public class AdminDashboardController : ControllerBase
             Overdue    = overdueCount
         };
 
-        // ── Category breakdown — load into memory first, then calculate ──
+        // ── Category breakdown ─────────────────────────────────────────
         var rawCategoryData = await (
             from course in _context.Courses
             join category in _context.CourseCategories on course.CourseCategoryId equals category.Id
@@ -84,7 +89,7 @@ public class AdminDashboardController : ControllerBase
                 };
             }).ToList();
 
-        // ── Top 3 most assigned courses — load into memory first ─────
+        // ── Top 3 most assigned courses ──────────────────────────────
         var rawCourseData = await (
             from course in _context.Courses
             join assignment in _context.CourseAssignments
@@ -184,20 +189,26 @@ public class AdminDashboardController : ControllerBase
             .ToList();
 
         // ── Overdue employees ────────────────────────────────────────
-        var overdueEmployees = await (
-            from a in _context.CourseAssignments
-            join emp in _context.Employees on a.EmployeeId equals emp.Id
-            where a.DueDate.HasValue && a.DueDate.Value < now && a.Status != "Completed"
-            group a by new { emp.Id, emp.FirstName, emp.LastName, emp.EmployeeCode } into g
-            orderby g.Count() descending
-            select new
+        // ✅ Fix: Load overdue verification parameters cleanly into memory 
+        // to handle mixed database timezone schemas securely without throwing Postgres mapping errors
+        var overdueEmployees = allAssignments
+            .Where(a => a.DueDate.HasValue && 
+                        (a.DueDate.Value.Kind == DateTimeKind.Utc ? a.DueDate.Value : a.DueDate.Value.ToUniversalTime()) < now && 
+                        a.Status != "Completed")
+            .Join(await _context.Employees.ToListAsync(), 
+                a => a.EmployeeId, 
+                e => e.Id, 
+                (a, e) => e)
+            .GroupBy(e => new { e.Id, e.FirstName, e.LastName, e.EmployeeCode })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new
             {
                 EmployeeId   = g.Key.Id,
                 Name         = g.Key.FirstName + " " + g.Key.LastName,
                 EmployeeCode = g.Key.EmployeeCode,
                 OverdueCount = g.Count()
-            }
-        ).ToListAsync();
+            })
+            .ToList();
 
         // ── Recent certificates ──────────────────────────────────────
         var recentCertificates = await (
