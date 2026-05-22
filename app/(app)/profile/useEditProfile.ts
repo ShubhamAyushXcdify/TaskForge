@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { safeJsonParse } from "./profileUtils";
 import { useSession } from "next-auth/react";
+import { apiFetch } from "./api";
 
 interface EditForm {
   firstName: string;
@@ -60,8 +61,8 @@ export function useEditProfile({ fullName, token, backendUrl }: UseEditProfileOp
     }
 
     if (passwordChanged) {
-      if (editForm.newPassword.length < 8) {
-        toast.error("New password must be at least 8 characters");
+      if (editForm.newPassword.length < 6) {
+        toast.error("New password must be at least 6 characters");
         return;
       }
       if (editForm.newPassword !== editForm.confirmPassword) {
@@ -82,16 +83,11 @@ export function useEditProfile({ fullName, token, backendUrl }: UseEditProfileOp
         payload.password = editForm.newPassword; 
       }
 
-      const res = await fetch(`${backendUrl}/api/Employee/me`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("PATCH /api/Employee/me →", res.status, payload);
+ const res = await apiFetch(`${backendUrl}/api/Employee/me`, token, {
+  method: "PATCH",
+  body: JSON.stringify(payload),
+});
+if (!res) return;
 
       const data = await safeJsonParse(res);
 

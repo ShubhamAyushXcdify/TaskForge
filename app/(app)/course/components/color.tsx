@@ -10,7 +10,7 @@ export const categoryColors: Record<string, string> = {
   Backend: "from-emerald-200 to-green-300",
   Frontend: "from-blue-200 to-indigo-300",
   Cloud: "from-indigo-200 to-violet-300",
-  Architecture: "from-amber-200 to-orange-300",
+  "UI/UX": "from-amber-200 to-orange-300",
 
   DevOps: "from-lime-200 to-green-300",
   Database: "from-sky-200 to-blue-300",

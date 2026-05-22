@@ -224,7 +224,7 @@ function CategoryBars({ categories }: { categories: CategoryBreakdown[] }) {
   const sorted = [...categories].sort((a, b) => b.completionRate - a.completionRate);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 overflow-y-auto pr-1" style={{ maxHeight: `${4 * 52}px` }}  >
       {sorted.map((cat, i) => {
         const color = paletteColor(i);
         const pct   = Math.round(cat.completionRate);
@@ -443,7 +443,7 @@ export default function Overview({ onNavigate }: { onNavigate?: (tab: Tab) => vo
       </div>
 
       {/* ── Status + Categories ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
         <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-5">
           <h3 className="text-xs font-medium text-slate-400 mb-4 uppercase tracking-wider">Assignment status</h3>
           <DonutChart breakdown={statusBreakdown} />

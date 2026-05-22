@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import {
   safeFetch, isOk, getData,
   mapStats, mapDay, mapCat, mapAct,
-  fetchTodos, createTodo, toggleTodoApi,
+  fetchTodos, createTodo, toggleTodoApi,UnauthorizedError,
 } from "@/app/(app)/dashboard/components/dashboardApi";
 import type { DashboardStats, WeeklyHours, CategoryBreakdown, Activity, Todo } from "@/app/(app)/dashboard/components/dashboard";
 import { DEFAULT_STATS } from "@/app/(app)/dashboard/components/dashboard";
@@ -14,6 +14,13 @@ export function useDashboard() {
   const { data: session,status } = useSession();
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const token = session?.user?.token as string | undefined;
+
+  const handle401 = async (err: unknown) => {
+    if (err instanceof UnauthorizedError) {
+      await signOut({ redirect: false });
+      window.location.href = "/login";
+    }
+  };
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const [stats,             setStats]             = useState<DashboardStats>(DEFAULT_STATS);
@@ -48,11 +55,12 @@ export function useDashboard() {
 
     const t = token;
 
-    safeFetch(`${backendUrl}/api/Dashboard/stats`, t)
+     safeFetch(`${backendUrl}/api/Dashboard/stats`, t)
       .then(j => {
         if (isOk(j) && getData(j)) setStats(mapStats(getData(j)));
         else setStatsError(true);
       })
+      .catch(handle401)
       .finally(() => setStatsLoading(false));
 
     safeFetch(`${backendUrl}/api/Dashboard/weekly-hours`, t)
@@ -64,20 +72,23 @@ export function useDashboard() {
             lastWeek: (d.LastWeek ?? d.lastWeek ?? []).map(mapDay),
           });
         }
-      })
+      }).catch(handle401)
       .finally(() => setWeeklyLoading(false));
 
     safeFetch(`${backendUrl}/api/Dashboard/category-breakdown`, t)
       .then(j => { if (isOk(j)) setCategories((getData(j) ?? []).map(mapCat)); })
+      .catch(handle401)
       .finally(() => setCategoriesLoading(false));
 
     safeFetch(`${backendUrl}/api/Dashboard/activity`, t)
       .then(j => { if (isOk(j)) setActivity((getData(j) ?? []).map(mapAct)); })
+      .catch(handle401)
       .finally(() => setActivityLoading(false));
 
     // Todos use /api/Todo (matches actual API)
     fetchTodos(backendUrl, t)
       .then(setTodos)
+      .catch(handle401)
       .finally(() => setTodosLoading(false));
   }, [session, backendUrl]);
 
@@ -91,10 +102,11 @@ export function useDashboard() {
     // Optimistic update
     setTodos(l => l.map(t => t.id === id ? { ...t, isCompleted: next } : t));
 
-    const ok = await toggleTodoApi(backendUrl, id, next, token);
-    if (!ok) {
-      // Rollback
-      setTodos(l => l.map(t => t.id === id ? { ...t, isCompleted: todo.isCompleted } : t));
+    try {
+      const ok = await toggleTodoApi(backendUrl, id, next, token);
+      if (!ok) setTodos(l => l.map(t => t.id === id ? { ...t, isCompleted: todo.isCompleted } : t));
+    } catch (err) {
+      await handle401(err);
     }
   };
 
@@ -104,18 +116,25 @@ export function useDashboard() {
     const tempId = `temp-${Date.now()}`;
     setTodos(l => [...l, { id: tempId, title, isCompleted: false }]);
 
-    const created = await createTodo(backendUrl, title, token);
-    if (created) {
-      setTodos(l => l.map(t => t.id === tempId ? created : t));
-      return true;
-    } else {
-      // Rollback optimistic item
+   try {
+      const created = await createTodo(backendUrl, title, token);
+      if (created) {
+        setTodos(l => l.map(t => t.id === tempId ? created : t));
+        return true;
+      } else {
+        setTodos(l => l.filter(t => t.id !== tempId));
+        return false;
+      }
+    } catch (err) {
+      await handle401(err); 
       setTodos(l => l.filter(t => t.id !== tempId));
       return false;
     }
   };
+    
 
-  return {
+
+ return {
     stats, statsLoading, statsError,
     weeklyHours, weeklyLoading,
     categories, categoriesLoading,

@@ -1,5 +1,9 @@
 import type {DashboardStats, DayHours,CategoryBreakdown,Activity,Todo,WeeklyHours, } from "@/app/(app)/dashboard/components//dashboard";
 
+export class UnauthorizedError extends Error {
+  constructor() { super("Unauthorized"); }
+}
+
 
 export const isOk    = (r: any) => r?.Success === true || r?.success === true;
 export const getData = (r: any) => r?.Data ?? r?.data ?? null;
@@ -51,10 +55,11 @@ export async function safeFetch(url: string, token?: string): Promise<any> {
   if (token) headers["Authorization"] = `Bearer ${token}`;
   try {
     const res = await fetch(url, { headers });
+    if (res.status === 401) throw new UnauthorizedError();
     if (!res.ok) return null;
     return await res.json();
-  } catch {
-    return null;
+  } catch (e){
+    throw e;
   }
 }
 
@@ -79,11 +84,12 @@ export async function createTodo(
       headers,
       body: JSON.stringify({ Title: title }),
     });
+    if (res.status === 401) throw new UnauthorizedError();
     const json = await res.json();
     if (isOk(json) && getData(json)) return mapTodo(getData(json));
     return null;
-  } catch {
-    return null;
+  } catch (e) {
+    throw e;
   }
 }
 
@@ -101,8 +107,9 @@ export async function toggleTodoApi(
       headers,
       body: JSON.stringify({ IsCompleted: isCompleted }),
     });
+    if (res.status === 401) throw new UnauthorizedError();
     return res.ok;
-  } catch {
-    return false;
+  } catch (e) {
+    throw e;
   }
 }

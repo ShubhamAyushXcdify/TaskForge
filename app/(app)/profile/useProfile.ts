@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import type { MyCourse, DashboardStats } from "@/types/types";
 import { resolveCertUrl, getFullName, getEmployeeCode, getUserId } from "./profileUtils";
+import { apiFetch } from "./api";
 
 interface CertificateUploadResponse {
   success: boolean;
@@ -40,16 +41,11 @@ export function useProfileData() {
 
     const fetchData = async () => {
       try {
-        const headers = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        };
-
-        const [coursesRes, statsRes] = await Promise.all([
-          fetch(`${backendUrl}/api/Course/MyCourses`, { headers }),
-          fetch(`${backendUrl}/api/Dashboard/stats`, { headers }),
-        ]);
-
+       const [coursesRes, statsRes] = await Promise.all([
+  apiFetch(`${backendUrl}/api/Course/MyCourses`, token),
+  apiFetch(`${backendUrl}/api/Dashboard/stats`, token),
+]);
+if (!coursesRes || !statsRes) return;
         const [coursesData, statsData] = await Promise.all([
           coursesRes.json(),
           statsRes.json(),

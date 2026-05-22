@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import { useApiFetch } from "./api";
 import { Employee,EmployeeDetail} from "./type";
 import {initials,fmtDate, statusCfg,assignBadge,} from "./utils";
-// import { EditProfileModal } from "./editEmployeeModal";
-import { EditProfileModal } from "@/components/EditProfile";
+import { EditProfileModal } from "./editEmployeeModal";
+
 
 export default function EmployeeDrawer({
   employeeId,
@@ -128,7 +128,6 @@ export default function EmployeeDrawer({
   // ── Called by EditProfileModal on success ───────────────────────────────────
   const handleEditUpdated = useCallback(
     (updated: { id: string; firstName: string; lastName: string; email: string; employeeCode: string; role: { id: string; name: string } }) => {
-      // Update local drawer state so it reflects immediately without refetch
       setData((prev) =>
         prev
           ? {
@@ -141,7 +140,7 @@ export default function EmployeeDrawer({
             }
           : prev
       );
-      // Also bubble up to the table list
+      
       onEmployeeUpdated(updated);
     },
     [onEmployeeUpdated]
@@ -331,7 +330,6 @@ export default function EmployeeDrawer({
       {/* Edit modal — renders on top of the drawer (z-[60]) */}
       {showEdit && data && (
         <EditProfileModal
-          mode="admin"
           employee={{
             id:               data.id,
             userId:           data.userId,

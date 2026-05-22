@@ -91,13 +91,13 @@ export default function EditAssignmentModal({
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">{assignment.employeeName}</p>
-                <p className="text-[11px] text-slate-500">{assignment.employeeCode} · {assignment.employeeDepartment}</p>
+                <p className="text-[11px] text-slate-500">{assignment.employeeCode} </p>
               </div>
             </div>
             <div className="pt-2 border-t border-slate-700/50">
               <p className="text-xs font-medium text-slate-300">{assignment.courseTitle}</p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                {assignment.courseCategory} · {assignment.courseDurationHours}h
+                {assignment.courseCategory}
               </p>
             </div>
             {assignment.dueDate && (
@@ -129,21 +129,7 @@ export default function EditAssignmentModal({
             </div>
           </div>
 
-          {/* Progress */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
-              Progress — <span className="text-white normal-case">{progress}%</span>
-            </label>
-            <input
-              type="range" min={0} max={100} value={progress}
-              onChange={(e) => setProgress(e.target.value)}
-              className="w-full accent-indigo-500"
-            />
-            <div className="flex justify-between text-[9px] text-slate-600 mt-0.5">
-              <span>0%</span><span>50%</span><span>100%</span>
-            </div>
-          </div>
-
+      
           {showDeleteConfirm && (
             <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-4 space-y-3">
               <p className="text-xs text-red-300">

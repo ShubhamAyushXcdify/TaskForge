@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { Course } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -22,6 +22,11 @@ export function useApiFetch() {
         credentials: "include",
         ...options,
       });
+       if (res.status === 401) {
+        await signOut({ redirect: false });
+        window.location.href = "/login";
+        throw new Error("Session expired");
+      }
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

@@ -78,9 +78,9 @@ export default function AdminPage() {
 
       {/* ── Sidebar ──────────────────────────────────────────────────────────── */}
       <aside
-        className={`shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 ${
-          sidebarCollapsed ? "w-16" : "w-60"
-        }`}
+       className={`shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 sticky top-0 h-screen ${
+  sidebarCollapsed ? "w-16" : "w-60"
+}`}
       >
         {/* Logo */}
         <div className={`border-b border-slate-800 flex items-center justify-between ${sidebarCollapsed ? "px-3 py-5" : "px-6 py-5"}`}>
@@ -252,3 +252,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+

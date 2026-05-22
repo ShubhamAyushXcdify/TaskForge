@@ -31,7 +31,6 @@ export default function AssignModal({ onClose, onAssigned }: AssignModalProps) {
 
     apiFetch<any>("/api/admin/employees")
   .then((response) => {
-    console.log("EMP RESPONSE:", response);
 
     const rawEmployees =
       response?.employees ||
@@ -45,8 +44,6 @@ export default function AssignModal({ onClose, onAssigned }: AssignModalProps) {
 
     setEmployees(employeesList);
 
-    toast.success(`Loaded ${employeesList.length} employees`);
-
     return employeesList;
   })
   .catch(() => {
@@ -59,7 +56,6 @@ export default function AssignModal({ onClose, onAssigned }: AssignModalProps) {
       const list = response.Success ? response.Data : (response.data ?? response ?? []);
       const coursesList = Array.isArray(list) ? list.map(mapCourse) : [];
       setCourses(coursesList);
-      toast.success(`Loaded ${coursesList.length} courses`);
     }).catch(() => {
       toast.error("Failed to load courses");
       setCourses([]);

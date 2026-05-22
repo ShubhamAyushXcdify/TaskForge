@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import CourseCard from "@/app/(app)/course/components/courseCard";
 import { CourseAssignment } from "@/types/types";
+import { useApiFetch } from "@/app/admin/courses/api";
 
 export default function CoursePage() {
   const { data: session, status } = useSession();
@@ -18,63 +19,101 @@ export default function CoursePage() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+// const apiFetch = useApiFetch();
+//   const fetchData = useCallback(async () => {
+    
+//     if (status === "loading" || !session?.user?.token) {
+//       setLoading(status === "loading");
+//       return;
+//     }
 
-  const fetchData = useCallback(async () => {
-    if (status === "loading" || !session?.user?.token) {
-      setLoading(status === "loading");
-      return;
+//     try {
+//       setLoading(true);
+//       setCourseError(null);
+
+//       const headers: HeadersInit = {
+//         "Content-Type": "application/json",
+//         "Authorization": `Bearer ${session.user.token}`
+//       };
+
+//       const [myData, allData] = await Promise.all([
+//         apiFetch(`${backendUrl}/api/Course/MyCourses`, { headers }),
+//         apiFetch(`${backendUrl}/api/Course`, { headers }),
+//       ]);
+
+ 
+//      if (myData?.success) {
+//   setMyAssignments(
+//     (myData.data?.assignments || []).map((a: any) => ({
+//             assignmentId: a.assignmentId,
+//             courseId: a.courseId,
+//             courseTitle: a.courseTitle,
+//             courseCategory: a.courseCategory,
+//             providerName: a.providerName,
+//             durationHours: a.durationHours,
+//             progressPercentage: a.progressPercentage || 0,
+//             status:
+//   a.Status ||
+//   a.status ||
+//   a.assignmentStatus ||
+//   a.assignmentStatus ||
+//   "notstarted",
+//           }))
+//         );
+//       }
+
+//       if (allData?.success) {
+//   const shuffled = allData.data.sort(() => Math.random() - 0.5);
+//         setAllCourses(shuffled || []);
+//       }
+//     } catch (err) {
+//       setCourseError("Failed to load courses");
+//     } finally {
+//       setLoading(false);
+//     }
+//   }, [backendUrl, session?.user?.token, status]);
+
+const apiFetch = useApiFetch(); // 👈 moved here
+
+const fetchData = useCallback(async () => {
+  if (status === "loading" || !session?.user?.token) {
+    setLoading(status === "loading");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setCourseError(null);
+
+    const [myData, allData] = await Promise.all([
+      apiFetch<any>("/api/Course/MyCourses"),
+      apiFetch<any>("/api/Course"),
+    ]);
+
+    if (myData?.success) {
+      setMyAssignments(
+        (myData.data?.assignments || []).map((a: any) => ({
+          assignmentId: a.assignmentId,
+          courseId: a.courseId,
+          courseTitle: a.courseTitle,
+          courseCategory: a.courseCategory,
+          providerName: a.providerName,
+          durationHours: a.durationHours,
+          progressPercentage: a.progressPercentage || 0,
+          status: a.Status || a.status || a.assignmentStatus || "notstarted",
+        }))
+      );
     }
 
-    try {
-      setLoading(true);
-      setCourseError(null);
-
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.user.token}`
-      };
-
-      const [myRes, allRes] = await Promise.all([
-        fetch(`${backendUrl}/api/Course/MyCourses`, { headers }),
-        fetch(`${backendUrl}/api/Course`, { headers }),
-      ]);
-
-      if (!myRes.ok || !allRes.ok) {
-        throw new Error("Failed to fetch courses");
-      }
-
-      const [myData, allData] = await Promise.all([myRes.json(), allRes.json()]);
-
-     if (myData?.success) {
-  setMyAssignments(
-    (myData.data?.assignments || []).map((a: any) => ({
-            assignmentId: a.assignmentId,
-            courseId: a.courseId,
-            courseTitle: a.courseTitle,
-            courseCategory: a.courseCategory,
-            providerName: a.providerName,
-            durationHours: a.durationHours,
-            progressPercentage: a.progressPercentage || 0,
-            status:
-  a.Status ||
-  a.status ||
-  a.assignmentStatus ||
-  a.assignmentStatus ||
-  "notstarted",
-          }))
-        );
-      }
-
-      if (allData?.success) {
-  const shuffled = allData.data.sort(() => Math.random() - 0.5);
-        setAllCourses(shuffled || []);
-      }
-    } catch (err) {
-      setCourseError("Failed to load courses");
-    } finally {
-      setLoading(false);
+    if (allData?.success) {
+      setAllCourses(allData.data.sort(() => Math.random() - 0.5));
     }
-  }, [backendUrl, session?.user?.token, status]);
+  } catch (err) {
+    setCourseError("Failed to load courses");
+  } finally {
+    setLoading(false);
+  }
+}, [apiFetch, session?.user?.token, status]); // 👈 apiFetch in deps
 
   useEffect(() => {
     fetchData();
