@@ -13,6 +13,7 @@ import Settings      from "./settings/settting";
 // import Notifications from "./components/notification";
 
 import {Notifications } from "./components/notification";
+import TaskModal from "./task";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,9 @@ export default function AdminPage() {
             );
           })}
         </nav>
+        <div className="px-2 pb-1">
+  <TaskModal backendUrl={process.env.NEXT_PUBLIC_BACKEND_URL!} token={session?.user?.token} />
+</div>
 
         {/* Admin badge */}
         <div className={`border-t border-slate-800 ${sidebarCollapsed ? "px-2 py-4" : "px-4 py-4"}`}>
@@ -166,6 +170,8 @@ export default function AdminPage() {
             </h2>
             <p className="text-xs text-slate-500">{tabSubtitles[activeTab]}</p>
           </div>
+          {/* Task Drawer */}
+
 
           {/* Profile dropdown */}
           <div className="relative" ref={profileRef}>
